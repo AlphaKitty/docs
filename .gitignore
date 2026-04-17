@@ -1,0 +1,38 @@
+.DS_Store
+.idea/
+.vscode/
+*.iml
+
+# logs
+*.log
+logs/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# node / frontend
+node_modules/
+dist/
+coverage/
+.pnpm-store/
+.npm/
+.yarn/
+.cache/
+*.tsbuildinfo
+
+# java / backend
+target/
+build/
+.gradle/
+out/
+*.class
+
+# temp files
+tmp/
+temp/
+*.swp
+*.swo

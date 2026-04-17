@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: expertlink-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: expertlink_db
+      MYSQL_USER: expertlink
+      MYSQL_PASSWORD: expertlink123
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - expertlink-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ppassword"]
+      timeout: 10s
+      retries: 10
+
+  # (Optional) Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: expertlink-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - expertlink-network
+    command: redis-server --appendonly yes --requirepass expertlink123
+
+networks:
+  expertlink-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
