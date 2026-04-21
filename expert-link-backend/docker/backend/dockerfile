@@ -1,0 +1,11 @@
+# 基础镜像
+# FROM  harbor.gitp.docker.local:30080/jdk/oraclejdk:1.8.0_333-centos7.9.2009
+FROM  harbor.goertek.com/base/oraclejdk:18.0.1.1-centos7.9.2009-UTC8
+#FROM  harbor.goertek.com/base/openjdk:11.0.16-jdk-arthas-3.6.7-UTC-8
+# author
+MAINTAINER goertek
+ENV TZ Asia/Shanghai
+# 复制jar文件到路径
+COPY ./jar/expert-link-backend-1.0.0.jar /expert-link-backend-1.0.0.jar
+# 启动系统服务
+ENTRYPOINT ["java","-jar","expert-link-backend-1.0.0.jar"]
