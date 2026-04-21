@@ -2,7 +2,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: expert-link-frontend-deploy
-  namespace: bpit-common
+  namespace: bpit-common-release
   labels:
     app.kubernetes.io/name: expert-link-frontend
 spec:
@@ -26,7 +26,7 @@ spec:
       containers:
         - name: expert-link-frontend-container
           image: >-
-            harbor.goertek.com/bpit-common/expert-link-frontend:{{version}}
+            harbor.goertek.com/bpit-common-release/expert-link-frontend:{{version}}
           ports:
             - name: http
               containerPort: 80  # Nginx 默认端口
