@@ -148,7 +148,8 @@ const router = createRouter({
       path: '/engagements/new',
       name: 'EngagementNew',
       component: () => import('@/views/engagements/EngagementCreateView.vue'),
-      meta: { menuKey: 'engagements.new' },
+      // 与「我的申请」同一权限：新建入口不在侧栏单独占键，避免仅 SUPER_ADMIN 默认含 engagements.new 时被重定向到仪表盘
+      meta: { menuKey: 'engagements.mine' },
     },
     {
       path: '/engagements/:id',
