@@ -1,0 +1,60 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: expert-link-frontend-deploy
+  namespace: bpit-common
+  labels:
+    app.kubernetes.io/name: expert-link-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: expert-link-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: expert-link-frontend
+    spec:
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+            type: ''
+        # 前端通常不需要持久化日志，但如果需要可以保留
+        - name: nginx-logs
+          emptyDir: { }
+      containers:
+        - name: expert-link-frontend-container
+          image: >-
+            harbor.goertek.com/bpit-common/expert-link-frontend:{{version}}
+          ports:
+            - name: http
+              containerPort: 80  # Nginx 默认端口
+              protocol: TCP
+          # 前端不需要 spring.profiles.active 参数
+          # 如果需要环境变量，可以这样配置：
+          # env:
+          #   - name: API_BASE_URL
+          #     value: "http://expert-link-backend-service:9200"
+          resources:
+            limits:
+              cpu: '1'
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: host-time
+              readOnly: true
+              mountPath: /etc/localtime
+            - name: nginx-logs
+              mountPath: /var/log/nginx
+          # 前端容器不需要 args
+          imagePullPolicy: IfNotPresent
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
