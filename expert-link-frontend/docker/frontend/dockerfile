@@ -12,7 +12,7 @@
 
 
 # 直接使用一个轻量的基础镜像，不再包含 Node.js
-FROM harbor.goertek.com/base/nginx-proxy
+FROM harbor.goertek.com/base/nginx-proxy:latest
 
 # 安装必要的运行库和 nginx
 # RUN apk add --no-cache libstdc++ nginx
