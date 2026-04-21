@@ -17,9 +17,11 @@ FROM harbor.goertek.com/aihub/nginx-proxy:latest
 # 安装必要的运行库和 nginx
 # RUN apk add --no-cache libstdc++ nginx
 
+CMD ["ls;"]
 # 设置工作目录
 WORKDIR /app
 
+CMD ["ls;"]
 # 关键: 将 Jenkins 工作空间里已经解压好的 Node.js 整个目录复制到镜像内
 # 假设 Node.js 被解压到了项目根目录下的 .node/ 文件夹中
 # ls
