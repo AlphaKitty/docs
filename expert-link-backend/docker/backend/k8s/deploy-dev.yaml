@@ -2,7 +2,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: expert-link-deploy
-  namespace: bpit-common
+  namespace: bpit-common-release
   labels:
     app.kubernetes.io/name: expert-link
 spec:
@@ -25,7 +25,7 @@ spec:
       containers:
         - name: expert-link-container
           image: >-
-            harbor.goertek.com/bpit-common/expert-link:{{version}}
+            harbor.goertek.com/bpit-common-release/expert-link:{{version}}
           ports:
             - name: http
               containerPort: 9200
