@@ -1,5 +1,6 @@
 # 直接使用一个轻量的基础镜像，不再包含 Node.js
-FROM harbor.goertek.com/aihub/nginx-proxy:latest
+# FROM harbor.goertek.com/aihub/nginx-proxy:latest
+FROM harbor.goertek.com/kubesphereio/nginx-unprivileged:1.24
 
 COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
