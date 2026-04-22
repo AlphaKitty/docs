@@ -5,7 +5,7 @@ server:
 
 spring:
   application:
-    name: expert-link
+    name: expert-link-backend
   
   # Database Configuration
   datasource:
@@ -43,7 +43,7 @@ spring:
 jwt:
   secret: expertlink-jwt-secret-key-change-in-production
   expiration: 86400000 # 24 hours in milliseconds
-  issuer: expert-link
+  issuer: expert-link-backend
 
 # Application Configuration
 app:
@@ -74,7 +74,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
   file:
-    name: logs/expert-link.log
+    name: logs/expert-link-backend.log
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

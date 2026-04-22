@@ -10,5 +10,5 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class JwtProperties {
     private String secret = "change-me";
     private long expiration = 86400000L;
-    private String issuer = "expert-link";
+    private String issuer = "expert-link-backend";
 }

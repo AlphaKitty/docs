@@ -1,7 +1,7 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: expert-link-deploy
+  name: expert-link-backend-deploy
   namespace: bpit-common
   labels:
     app.kubernetes.io/name: expert-link-backend
@@ -23,9 +23,9 @@ spec:
         - name: log
           emptyDir: {}
       containers:
-        - name: expert-link-container
+        - name: expert-link-backend-container
           image: >-
-            harbor.goertek.com/bpit-common-release/expert-link:{{version}}
+            harbor.goertek.com/bpit-common-release/expert-link-backend:{{version}}
           ports:
             - name: http
               containerPort: 8888
