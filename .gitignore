@@ -16,7 +16,7 @@ logs/
 
 # node / frontend
 node_modules/
-dist/
+#dist/
 coverage/
 .pnpm-store/
 .npm/
