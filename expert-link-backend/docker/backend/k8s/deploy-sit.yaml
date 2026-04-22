@@ -28,7 +28,7 @@ spec:
             harbor.goertek.com/bpit-common-release/expert-link:{{version}}
           ports:
             - name: http
-              containerPort: 9200
+              containerPort: 8888
               protocol: TCP
           args:
             - '--spring.profiles.active=sit'
