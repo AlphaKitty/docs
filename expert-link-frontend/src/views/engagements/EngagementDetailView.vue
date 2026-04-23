@@ -44,7 +44,13 @@
         <el-descriptions-item label="开始">{{ row.startAt }}</el-descriptions-item>
         <el-descriptions-item label="结束">{{ row.endAt || '—' }}</el-descriptions-item>
         <el-descriptions-item label="任务描述" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
-        <el-descriptions-item label="指定专家">{{ row.designatedExpertName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="指定专家">
+          {{
+            row.designatedExpertNames?.length
+              ? row.designatedExpertNames.join('、')
+              : (row.designatedExpertName || '—')
+          }}
+        </el-descriptions-item>
         <el-descriptions-item label="指派专家">{{ row.assignedExpertName || '—' }}</el-descriptions-item>
         <el-descriptions-item label="指派说明" :span="2">{{ row.assignmentNote || '—' }}</el-descriptions-item>
         <el-descriptions-item v-if="row.suggestedScore != null" label="系统建议分">

@@ -12,6 +12,15 @@ import type {
  * 领域服务
  */
 export class DomainService {
+  static async downloadImportTemplate(): Promise<Blob> {
+    try {
+      return await apiClient.get<Blob>('/domains/import-template', {
+        responseType: 'blob'
+      })
+    } catch (error) {
+      throw handleApiError(error, '下载领域导入模板失败')
+    }
+  }
   static async getDomainStats(id: number): Promise<{
     domainId: number
     subtreeDomainCount: number
@@ -182,12 +191,24 @@ export class DomainService {
   /**
    * 导入领域数据
    */
-  static async importDomains(file: File): Promise<ApiResponse<void>> {
+  static async importDomains(file: File): Promise<ApiResponse<{
+    total: number
+    success: number
+    failed: number
+    skipped: number
+    errors: Array<{ row: number; message: string }>
+  }>> {
     try {
       const formData = new FormData();
       formData.append('file', file);
       
-      return await apiClient.post<ApiResponse<void>>('/domains/import', formData, {
+      return await apiClient.post<ApiResponse<{
+        total: number
+        success: number
+        failed: number
+        skipped: number
+        errors: Array<{ row: number; message: string }>
+      }>>('/domains/import', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

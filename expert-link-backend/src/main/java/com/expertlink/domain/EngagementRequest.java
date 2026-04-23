@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "engagement_requests")
@@ -47,10 +49,15 @@ public class EngagementRequest extends BaseEntity {
     @Column(name = "task_description", columnDefinition = "TEXT")
     private String taskDescription;
 
-    /** 点名模式下申请人可选指定的专家 */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "designated_expert_id")
-    private Expert designatedExpert;
+    /** 点名模式下申请人可选指定的专家（可多选） */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "engagement_request_designated_experts",
+            joinColumns = @JoinColumn(name = "engagement_request_id"),
+            inverseJoinColumns = @JoinColumn(name = "expert_id")
+    )
+    @Builder.Default
+    private Set<Expert> designatedExperts = new LinkedHashSet<>();
 
     /** 行管指派后的专家 */
     @ManyToOne(fetch = FetchType.LAZY)

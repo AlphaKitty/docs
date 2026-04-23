@@ -45,6 +45,15 @@ function toExpertParams(data: CreateExpertRequest | UpdateExpertRequest) {
  * 专家服务
  */
 export class ExpertService {
+  static async downloadImportTemplate(): Promise<Blob> {
+    try {
+      return await apiClient.get<Blob>('/experts/import-template', {
+        responseType: 'blob',
+      });
+    } catch (error) {
+      throw handleApiError(error, '下载专家导入模板失败');
+    }
+  }
   /**
    * 获取专家列表
    */
@@ -213,12 +222,24 @@ export class ExpertService {
   /**
    * 导入专家数据
    */
-  static async importExperts(file: File): Promise<ApiResponse<void>> {
+  static async importExperts(file: File): Promise<ApiResponse<{
+    total: number
+    success: number
+    failed: number
+    skipped: number
+    errors: Array<{ row: number; message: string }>
+  }>> {
     try {
       const formData = new FormData();
       formData.append('file', file);
       
-      return await apiClient.post<ApiResponse<void>>('/experts/import', formData, {
+      return await apiClient.post<ApiResponse<{
+        total: number
+        success: number
+        failed: number
+        skipped: number
+        errors: Array<{ row: number; message: string }>
+      }>>('/experts/import', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

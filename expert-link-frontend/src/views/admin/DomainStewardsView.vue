@@ -13,8 +13,13 @@
             :model-value="stewardIds(row)"
             multiple
             filterable
+            remote
+            clearable
+            reserve-keyword
+            :remote-method="debouncedRemoteSearchUsers"
+            :loading="usersLoading"
             collapse-tags
-            placeholder="选择用户"
+            placeholder="输入姓名/邮箱搜索用户"
             style="width: 100%"
             @update:model-value="(v) => onPick(row, v as number[])"
           >
@@ -32,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { DomainService } from '@/api/services/domain.service'
 import { UserAdminService, type AdminUserRow } from '@/api/services/user-admin.service'
@@ -41,6 +46,8 @@ import type { DomainDetail } from '@/api/types'
 const loading = ref(false)
 const domains = ref<DomainDetail[]>([])
 const users = ref<AdminUserRow[]>([])
+const usersLoading = ref(false)
+let userSearchTimer: ReturnType<typeof setTimeout> | null = null
 const pending = ref<Record<number, number[]>>({})
 const savingId = ref<number | null>(null)
 
@@ -57,7 +64,7 @@ const load = async () => {
   try {
     const [dRes, uRes] = await Promise.all([
       DomainService.getDomains({ page: 0, size: 200 }),
-      UserAdminService.getUsers(0, 500),
+      UserAdminService.searchUsers('', 0, 50),
     ])
     domains.value = dRes.content
     users.value = uRes.content
@@ -67,6 +74,26 @@ const load = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const remoteSearchUsers = async (keyword: string) => {
+  usersLoading.value = true
+  try {
+    const res = await UserAdminService.searchUsers(keyword || '', 0, 50)
+    users.value = res.content || []
+  } catch (e: any) {
+    users.value = []
+    ElMessage.error(e?.message || '加载用户失败')
+  } finally {
+    usersLoading.value = false
+  }
+}
+
+const debouncedRemoteSearchUsers = (keyword: string) => {
+  if (userSearchTimer) clearTimeout(userSearchTimer)
+  userSearchTimer = setTimeout(() => {
+    void remoteSearchUsers(keyword)
+  }, 300)
 }
 
 const save = async (row: DomainDetail) => {
@@ -85,6 +112,13 @@ const save = async (row: DomainDetail) => {
 
 onMounted(() => {
   void load()
+})
+
+onBeforeUnmount(() => {
+  if (userSearchTimer) {
+    clearTimeout(userSearchTimer)
+    userSearchTimer = null
+  }
 })
 </script>
 

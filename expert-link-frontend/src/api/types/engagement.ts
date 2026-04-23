@@ -38,6 +38,8 @@ export interface EngagementRequestRow {
   startAt: string
   endAt?: string | null
   taskDescription?: string | null
+  designatedExpertIds?: number[] | null
+  designatedExpertNames?: string[] | null
   designatedExpertId?: number | null
   designatedExpertName?: string | null
   assignedExpertId?: number | null
@@ -72,7 +74,7 @@ export interface CreateEngagementDraftPayload {
   startAt: string
   endAt?: string | null
   taskDescription?: string | null
-  designatedExpertId?: number | null
+  designatedExpertIds?: number[] | null
 }
 
 export type PaginatedEngagements = PaginatedResponse<EngagementRequestRow>

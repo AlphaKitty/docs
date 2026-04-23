@@ -9,13 +9,17 @@ import com.expertlink.dto.expert.BulkAddExpertsByDomainResponse;
 import com.expertlink.dto.domain.DomainStatsResponse;
 import com.expertlink.dto.domain.DomainStatsBatchRequest;
 import com.expertlink.dto.domain.ReplaceDomainStewardsRequest;
+import com.expertlink.dto.importing.ImportResultResponse;
 import com.expertlink.service.DomainService;
 import com.expertlink.service.ExpertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashSet;
 import java.util.List;
@@ -296,5 +300,19 @@ public class DomainController {
             Pageable pageable) {
         Page<Domain> domains = domainService.searchByKeyword(keyword, pageable);
         return ApiResponses.okPage(domains);
+    }
+
+    @GetMapping("/import-template")
+    public ResponseEntity<byte[]> downloadImportTemplate() {
+        byte[] data = domainService.buildImportTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=domains-template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ApiResponse<ImportResultResponse>> importDomains(@RequestParam("file") MultipartFile file) {
+        return ApiResponses.ok(domainService.importDomains(file));
     }
 }

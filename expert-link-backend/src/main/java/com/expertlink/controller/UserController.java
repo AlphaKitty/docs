@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -161,7 +163,7 @@ public class UserController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PaginatedResponse<User>>> searchUsers(
             @RequestParam(required = false) String keyword,
-            Pageable pageable) {
+            @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<User> users = userService.searchUsers(keyword, pageable);
         return ApiResponses.okPage(users);
     }

@@ -21,7 +21,7 @@
             clearable
             reserve-keyword
             placeholder="输入姓名、用户名或邮箱搜索"
-            :remote-method="remoteSearchUsers"
+            :remote-method="debouncedRemoteSearchUsers"
             :loading="userSearchLoading"
             style="width: 100%"
           >
@@ -147,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, onMounted } from 'vue'
+import { computed, reactive, ref, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useExpertStore } from '@/stores/expert'
 import { useAuthStore } from '@/stores/auth'
@@ -168,6 +168,7 @@ const loading = ref(false)
 const submitting = ref(false)
 const userSearchLoading = ref(false)
 const userOptions = ref<UserPickerItem[]>([])
+let userSearchTimer: ReturnType<typeof setTimeout> | null = null
 const designations = ref<ExpertDesignation[]>([])
 const desigDialogVisible = ref(false)
 const desigSaving = ref(false)
@@ -252,6 +253,13 @@ async function remoteSearchUsers(query: string) {
   } finally {
     userSearchLoading.value = false
   }
+}
+
+function debouncedRemoteSearchUsers(query: string) {
+  if (userSearchTimer) clearTimeout(userSearchTimer)
+  userSearchTimer = setTimeout(() => {
+    void remoteSearchUsers(query)
+  }, 300)
 }
 
 function openDesigDialog() {
@@ -387,6 +395,13 @@ onMounted(async () => {
     }
   } else {
     await loadExistingExpert()
+  }
+})
+
+onBeforeUnmount(() => {
+  if (userSearchTimer) {
+    clearTimeout(userSearchTimer)
+    userSearchTimer = null
   }
 })
 </script>

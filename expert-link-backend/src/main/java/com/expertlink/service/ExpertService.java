@@ -7,6 +7,8 @@ import com.expertlink.domain.Domain;
 import com.expertlink.domain.User;
 import com.expertlink.dto.expert.UserPickerDto;
 import com.expertlink.dto.expert.BulkAddExpertsByDomainResponse;
+import com.expertlink.dto.importing.ImportErrorRow;
+import com.expertlink.dto.importing.ImportResultResponse;
 import com.expertlink.repository.ExpertDesignationRepository;
 import com.expertlink.repository.ExpertRepository;
 import com.expertlink.repository.UserRepository;
@@ -16,10 +18,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -28,6 +38,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -155,6 +167,167 @@ public class ExpertService {
     @Transactional
     public Expert createByOwnerAndDesignation(Long ownerId, Long designationId) {
         return create(new Expert(), ownerId, null, null, null, designationId);
+    }
+
+    public byte[] buildImportTemplate() {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("experts");
+            Row header = sheet.createRow(0);
+            String[] columns = {
+                    "name", "email", "phone", "wechat", "company", "position", "introduction",
+                    "experienceYears", "hourlyRate", "availability", "primaryDomainName",
+                    "domainNames", "skillNames"
+            };
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+                sheet.setColumnWidth(i, 20 * 256);
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("生成专家导入模板失败", e);
+        }
+    }
+
+    @Transactional
+    public ImportResultResponse importExperts(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请上传 experts.xlsx 文件");
+        }
+        List<ImportErrorRow> errors = new ArrayList<>();
+        int total = 0;
+        int success = 0;
+        int skipped = 0;
+
+        try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
+            if (sheet == null) {
+                throw new IllegalArgumentException("文件中不存在工作表");
+            }
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isBlankRow(row, 13)) {
+                    continue;
+                }
+                total++;
+                try {
+                    String name = readString(row.getCell(0));
+                    String email = readString(row.getCell(1));
+                    if (!StringUtils.hasText(name) || !StringUtils.hasText(email)) {
+                        throw new IllegalArgumentException("name/email 为必填");
+                    }
+                    if (expertRepository.findByEmail(email).isPresent()) {
+                        skipped++;
+                        continue;
+                    }
+                    Expert expert = new Expert();
+                    expert.setName(name.trim());
+                    expert.setEmail(email.trim());
+                    expert.setPhoneNumber(readString(row.getCell(2)));
+                    expert.setWechatId(readString(row.getCell(3)));
+                    expert.setCurrentCompany(readString(row.getCell(4)));
+                    expert.setCurrentPosition(readString(row.getCell(5)));
+                    expert.setBiography(readString(row.getCell(6)));
+                    Integer years = readInteger(row.getCell(7));
+                    if (years != null) {
+                        expert.setYearsOfExperience(years);
+                    }
+                    BigDecimal hourlyRate = readDecimal(row.getCell(8));
+                    if (hourlyRate != null) {
+                        expert.setHourlyRate(hourlyRate);
+                    }
+                    String availability = readString(row.getCell(9));
+                    expert.setAvailabilityStatus(
+                            "UNAVAILABLE".equalsIgnoreCase(availability) ? "UNAVAILABLE" : "AVAILABLE");
+
+                    String primaryDomainName = readString(row.getCell(10));
+                    if (StringUtils.hasText(primaryDomainName)) {
+                        Domain domain = domainRepository.findByName(primaryDomainName.trim())
+                                .orElseThrow(() -> new IllegalArgumentException("主领域不存在: " + primaryDomainName));
+                        expert.setPrimaryDomain(domain);
+                    }
+
+                    String domainNames = readString(row.getCell(11));
+                    if (StringUtils.hasText(domainNames)) {
+                        Set<Domain> domains = Arrays.stream(domainNames.split(","))
+                                .map(String::trim)
+                                .filter(StringUtils::hasText)
+                                .map(nameText -> domainRepository.findByName(nameText)
+                                        .orElseThrow(() -> new IllegalArgumentException("领域不存在: " + nameText)))
+                                .collect(Collectors.toCollection(LinkedHashSet::new));
+                        expert.setDomains(domains);
+                    }
+
+                    String skillNames = readString(row.getCell(12));
+                    if (StringUtils.hasText(skillNames)) {
+                        Set<Skill> skills = Arrays.stream(skillNames.split(","))
+                                .map(String::trim)
+                                .filter(StringUtils::hasText)
+                                .map(nameText -> skillRepository.findByName(nameText)
+                                        .orElseThrow(() -> new IllegalArgumentException("技能不存在: " + nameText)))
+                                .collect(Collectors.toCollection(LinkedHashSet::new));
+                        expert.setSkills(skills);
+                    }
+
+                    expert.setIsVerified(false);
+                    expert.setVerificationLevel(0);
+                    expert.setReviewCount(0);
+                    expert.setProjectCount(0);
+                    expert.setOverallRating(BigDecimal.ZERO);
+                    expert.setSuccessRate(BigDecimal.ZERO);
+                    expert.setCreatedAt(LocalDateTime.now());
+                    expert.setUpdatedAt(LocalDateTime.now());
+                    expert.setLastActiveTime(LocalDateTime.now());
+                    expertRepository.save(expert);
+                    success++;
+                } catch (Exception ex) {
+                    errors.add(ImportErrorRow.builder()
+                            .row(i + 1)
+                            .message(ex.getMessage())
+                            .build());
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("解析 experts.xlsx 失败", e);
+        }
+
+        return ImportResultResponse.builder()
+                .total(total)
+                .success(success)
+                .skipped(skipped)
+                .failed(errors.size())
+                .errors(errors)
+                .build();
+    }
+
+    private static String readString(Cell cell) {
+        if (cell == null) return null;
+        CellType type = cell.getCellType();
+        if (type == CellType.STRING) return cell.getStringCellValue();
+        if (type == CellType.NUMERIC) return BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros().toPlainString();
+        if (type == CellType.BOOLEAN) return String.valueOf(cell.getBooleanCellValue());
+        return null;
+    }
+
+    private static Integer readInteger(Cell cell) {
+        String text = readString(cell);
+        if (!StringUtils.hasText(text)) return null;
+        return Integer.parseInt(text.trim());
+    }
+
+    private static BigDecimal readDecimal(Cell cell) {
+        String text = readString(cell);
+        if (!StringUtils.hasText(text)) return null;
+        return new BigDecimal(text.trim());
+    }
+
+    private static boolean isBlankRow(Row row, int expectedCols) {
+        for (int i = 0; i < expectedCols; i++) {
+            if (StringUtils.hasText(readString(row.getCell(i)))) return false;
+        }
+        return true;
     }
 
     private static void applyUserProfile(User owner, Expert expert) {
