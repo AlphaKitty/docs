@@ -4,6 +4,7 @@ import com.expertlink.domain.Expert;
 import com.expertlink.dto.ApiResponse;
 import com.expertlink.security.AuthPrincipal;
 import com.expertlink.dto.PaginatedResponse;
+import com.expertlink.dto.importing.ImportResultResponse;
 import com.expertlink.service.ExpertPrivacyService;
 import com.expertlink.service.ExpertService;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.Collections;
 import java.util.List;
@@ -22,6 +24,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -92,5 +95,31 @@ class ExpertControllerTest {
         assertNotNull(response.getBody());
         assertEquals(201, response.getBody().getCode());
         assertEquals("Carol", response.getBody().getData().getName());
+    }
+
+    @Test
+    void downloadImportTemplateReturnsExcelBytes() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(expertService.buildImportTemplate()).thenReturn(bytes);
+
+        ResponseEntity<byte[]> response = controller.downloadImportTemplate();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertArrayEquals(bytes, response.getBody());
+    }
+
+    @Test
+    void importExpertsWrapsResultInApiResponse() {
+        var file = new MockMultipartFile("file", "experts.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1});
+        ImportResultResponse result = ImportResultResponse.builder()
+                .total(1).success(1).failed(0).skipped(0).build();
+        when(expertService.importExperts(any())).thenReturn(result);
+
+        ResponseEntity<ApiResponse<ImportResultResponse>> response = controller.importExperts(file);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getData().getSuccess());
     }
 }

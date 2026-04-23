@@ -34,6 +34,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +132,23 @@ public class EngagementRequestService {
     private static String newReferenceCode(long id) {
         String day = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
         return String.format("ER-%s-%06d", day, id);
+    }
+
+    private Set<Expert> resolveDesignatedExperts(List<Long> expertIds, Long domainId) {
+        if (expertIds == null || expertIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        Set<Expert> experts = new LinkedHashSet<>();
+        for (Long expertId : expertIds) {
+            if (expertId == null) {
+                continue;
+            }
+            Expert expert = expertRepository.findById(expertId)
+                    .orElseThrow(() -> new IllegalArgumentException("指定专家不存在"));
+            assertExpertCoversRequestDomain(expert, domainId);
+            experts.add(expert);
+        }
+        return experts;
     }
 
     private List<String> readAttachmentUrlList(String json) {
@@ -279,6 +297,12 @@ public class EngagementRequestService {
     }
 
     public EngagementRequestResponse toResponse(EngagementRequest e) {
+        List<Expert> designatedExperts = e.getDesignatedExperts() == null
+                ? List.of()
+                : e.getDesignatedExperts().stream()
+                .sorted(Comparator.comparing(Expert::getId))
+                .toList();
+        Expert firstDesignated = designatedExperts.isEmpty() ? null : designatedExperts.get(0);
         return EngagementRequestResponse.builder()
                 .id(e.getId())
                 .referenceCode(e.getReferenceCode())
@@ -310,8 +334,10 @@ public class EngagementRequestService {
                 .startAt(e.getStartAt())
                 .endAt(e.getEndAt())
                 .taskDescription(e.getTaskDescription())
-                .designatedExpertId(e.getDesignatedExpert() != null ? e.getDesignatedExpert().getId() : null)
-                .designatedExpertName(e.getDesignatedExpert() != null ? e.getDesignatedExpert().getName() : null)
+                .designatedExpertIds(designatedExperts.stream().map(Expert::getId).toList())
+                .designatedExpertNames(designatedExperts.stream().map(Expert::getName).toList())
+                .designatedExpertId(firstDesignated != null ? firstDesignated.getId() : null)
+                .designatedExpertName(firstDesignated != null ? firstDesignated.getName() : null)
                 .assignedExpertId(e.getAssignedExpert() != null ? e.getAssignedExpert().getId() : null)
                 .assignedExpertName(e.getAssignedExpert() != null ? e.getAssignedExpert().getName() : null)
                 .assignedByStewardId(e.getAssignedBySteward() != null ? e.getAssignedBySteward().getId() : null)
@@ -397,12 +423,7 @@ public class EngagementRequestService {
                 .taskDescription(dto.getTaskDescription())
                 .status(EngagementRequestStatus.DRAFT)
                 .build();
-        if (dto.getDesignatedExpertId() != null) {
-            Expert designated = expertRepository.findById(dto.getDesignatedExpertId())
-                    .orElseThrow(() -> new IllegalArgumentException("指定专家不存在"));
-            assertExpertCoversRequestDomain(designated, domain.getId());
-            e.setDesignatedExpert(designated);
-        }
+        e.setDesignatedExperts(resolveDesignatedExperts(dto.getDesignatedExpertIds(), domain.getId()));
         return toResponse(engagementRequestRepository.save(e));
     }
 
@@ -436,14 +457,13 @@ public class EngagementRequestService {
         if (dto.getTaskDescription() != null) {
             e.setTaskDescription(dto.getTaskDescription());
         }
-        if (dto.getDesignatedExpertId() != null) {
-            Expert designated = expertRepository.findById(dto.getDesignatedExpertId())
-                    .orElseThrow(() -> new IllegalArgumentException("指定专家不存在"));
-            assertExpertCoversRequestDomain(designated, e.getDomain().getId());
-            e.setDesignatedExpert(designated);
+        if (dto.getDesignatedExpertIds() != null) {
+            e.setDesignatedExperts(resolveDesignatedExperts(dto.getDesignatedExpertIds(), e.getDomain().getId()));
         }
-        if (e.getDesignatedExpert() != null) {
-            assertExpertCoversRequestDomain(e.getDesignatedExpert(), e.getDomain().getId());
+        if (e.getDesignatedExperts() != null) {
+            for (Expert expert : e.getDesignatedExperts()) {
+                assertExpertCoversRequestDomain(expert, e.getDomain().getId());
+            }
         }
         return toResponse(engagementRequestRepository.save(e));
     }
@@ -465,8 +485,10 @@ public class EngagementRequestService {
         if (e.getEndAt() != null && e.getEndAt().isBefore(e.getStartAt())) {
             throw new IllegalArgumentException("结束时间不能早于开始时间");
         }
-        if (e.getDesignatedExpert() != null) {
-            assertExpertCoversRequestDomain(e.getDesignatedExpert(), e.getDomain().getId());
+        if (e.getDesignatedExperts() != null) {
+            for (Expert expert : e.getDesignatedExperts()) {
+                assertExpertCoversRequestDomain(expert, e.getDomain().getId());
+            }
         }
         e.setStatus(EngagementRequestStatus.PENDING_STEWARD_ASSIGN);
         EngagementRequest saved = engagementRequestRepository.save(e);

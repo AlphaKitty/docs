@@ -5,6 +5,7 @@ import com.expertlink.domain.EngagementTaskType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class PatchEngagementDraftRequest {
@@ -15,5 +16,5 @@ public class PatchEngagementDraftRequest {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private String taskDescription;
-    private Long designatedExpertId;
+    private List<Long> designatedExpertIds;
 }

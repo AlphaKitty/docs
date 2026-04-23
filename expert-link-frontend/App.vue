@@ -115,7 +115,7 @@ const menuConfig: MenuGroup[] = [
     icon: User,
     path: '/experts',
   },
-  { key: 'domains', label: '领域管理', icon: User, path: '/domains' },
+  { key: 'domains', label: '专家入库', icon: User, path: '/domains' },
   { key: 'skills', label: '技能管理', icon: User, path: '/skills' },
   { key: 'projects', label: '项目列表', icon: Document, path: '/projects' },
   { key: 'analysis', label: '统计分析', icon: DataAnalysis, path: '/analysis' },

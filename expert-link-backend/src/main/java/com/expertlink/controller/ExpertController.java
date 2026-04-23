@@ -3,6 +3,7 @@ package com.expertlink.controller;
 import com.expertlink.dto.ApiResponse;
 import com.expertlink.dto.ApiResponses;
 import com.expertlink.dto.PaginatedResponse;
+import com.expertlink.dto.importing.ImportResultResponse;
 import com.expertlink.dto.expert.UserPickerDto;
 import com.expertlink.domain.Expert;
 import com.expertlink.security.AuthPrincipal;
@@ -14,11 +15,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -315,5 +319,19 @@ public class ExpertController {
             @PathVariable Long domainId) {
         Expert expert = expertService.removeDomain(expertId, domainId);
         return ApiResponses.ok(expert);
+    }
+
+    @GetMapping("/import-template")
+    public ResponseEntity<byte[]> downloadImportTemplate() {
+        byte[] data = expertService.buildImportTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=experts-template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
+    @PostMapping("/import")
+    public ResponseEntity<ApiResponse<ImportResultResponse>> importExperts(@RequestParam("file") MultipartFile file) {
+        return ApiResponses.ok(expertService.importExperts(file));
     }
 }

@@ -6,7 +6,18 @@
           <h2>领域管理</h2>
           <p>维护领域层级、状态及专家/项目关联概况。</p>
         </div>
-        <el-button type="primary" @click="goCreate">新建领域</el-button>
+        <div class="header-actions">
+          <el-button @click="downloadTemplate">下载导入模板</el-button>
+          <el-button type="primary" @click="triggerImport">批量导入领域</el-button>
+          <el-button type="primary" plain @click="goCreate">新建领域</el-button>
+          <input
+            ref="importInputRef"
+            type="file"
+            accept=".xlsx"
+            style="display: none"
+            @change="onImportFileChange"
+          />
+        </div>
       </div>
     </el-card>
 
@@ -54,7 +65,7 @@
         remote
         clearable
         reserve-keyword
-        :remote-method="remoteSearchUsers"
+        :remote-method="debouncedRemoteSearchUsers"
         :loading="userSearchLoading"
         collapse-tags
         placeholder="输入姓名/邮箱搜索用户（已是专家会自动跳过）"
@@ -76,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DomainService } from '@/api/services/domain.service'
@@ -90,11 +101,13 @@ const rows = ref<DomainDetail[]>([])
 const total = ref(0)
 const users = ref<UserPickerItem[]>([])
 const userSearchLoading = ref(false)
+let userSearchTimer: ReturnType<typeof setTimeout> | null = null
 const batchDialogVisible = ref(false)
 const batchSubmitting = ref(false)
 const currentDomain = ref<DomainDetail | null>(null)
 const selectedOwnerIds = ref<number[]>([])
 const statsByDomain = ref<Map<number, { expertCount: number; projectCount: number }>>(new Map())
+const importInputRef = ref<HTMLInputElement | null>(null)
 
 type DomainTreeNode = DomainDetail & { children: DomainTreeNode[] }
 
@@ -175,6 +188,13 @@ const remoteSearchUsers = async (keyword: string) => {
   }
 }
 
+const debouncedRemoteSearchUsers = (keyword: string) => {
+  if (userSearchTimer) clearTimeout(userSearchTimer)
+  userSearchTimer = setTimeout(() => {
+    void remoteSearchUsers(keyword)
+  }, 300)
+}
+
 const submitBatchAdd = async () => {
   if (!currentDomain.value) return
   if (selectedOwnerIds.value.length === 0) {
@@ -198,8 +218,54 @@ const submitBatchAdd = async () => {
   }
 }
 
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const downloadTemplate = async () => {
+  try {
+    const blob = await DomainService.downloadImportTemplate()
+    saveBlob(blob, 'domains-template.xlsx')
+  } catch (error: unknown) {
+    ElMessage.error((error as Error)?.message || '下载模板失败')
+  }
+}
+
+const triggerImport = () => {
+  importInputRef.value?.click()
+}
+
+const onImportFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const result = await DomainService.importDomains(file)
+    ElMessage.success(`导入完成：总计${result.data.total}，成功${result.data.success}，跳过${result.data.skipped}，失败${result.data.failed}`)
+    await fetchRows()
+  } catch (error: unknown) {
+    ElMessage.error((error as Error)?.message || '导入失败')
+  } finally {
+    input.value = ''
+  }
+}
+
 onMounted(() => {
   void fetchRows()
+})
+
+onBeforeUnmount(() => {
+  if (userSearchTimer) {
+    clearTimeout(userSearchTimer)
+    userSearchTimer = null
+  }
 })
 </script>
 
@@ -214,6 +280,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .header-row h2 {

@@ -33,6 +33,21 @@ export class UserAdminService {
     }
   }
 
+  static async searchUsers(
+    keyword: string,
+    page = 0,
+    size = 50
+  ): Promise<PaginatedResponse<AdminUserRow>> {
+    try {
+      const response = await apiClient.get<ApiResponse<PaginatedResponse<AdminUserRow>>>('/users/search', {
+        params: { keyword: keyword || undefined, page, size },
+      })
+      return response.data
+    } catch (error) {
+      throw handleApiError(error, '搜索用户失败')
+    }
+  }
+
   static async createUser(data: CreateUserPayload): Promise<AdminUserRow> {
     try {
       const response = await apiClient.post<ApiResponse<AdminUserRow>>('/users', data)

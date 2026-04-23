@@ -55,10 +55,12 @@
       </el-form-item>
       <el-form-item label="指定专家" v-if="form.mode === 'NAMED'">
         <el-select
-          v-model="form.designatedExpertId"
+          v-model="form.designatedExpertIds"
+          multiple
           filterable
           clearable
-          placeholder="请选择指定专家（可选）"
+          collapse-tags
+          placeholder="请选择指定专家（可多选）"
           style="width: 100%"
         >
           <el-option
@@ -102,7 +104,7 @@ const form = reactive({
   startAt: '',
   endAt: '' as string | null,
   taskDescription: '',
-  designatedExpertId: undefined as number | undefined,
+  designatedExpertIds: [] as number[],
 })
 
 onMounted(async () => {
@@ -144,7 +146,7 @@ async function loadDomainExperts() {
 watch(
   () => form.domainId,
   async () => {
-    form.designatedExpertId = undefined
+    form.designatedExpertIds = []
     await loadDomainExperts()
   }
 )
@@ -163,7 +165,7 @@ async function onSave() {
       startAt: form.startAt,
       endAt: form.endAt || undefined,
       taskDescription: form.taskDescription || undefined,
-      ...(form.designatedExpertId != null ? { designatedExpertId: form.designatedExpertId } : {}),
+      ...(form.designatedExpertIds.length > 0 ? { designatedExpertIds: form.designatedExpertIds } : {}),
     })
     ElMessage.success('草稿已创建')
     await router.push(`/engagements/${created.id}`)

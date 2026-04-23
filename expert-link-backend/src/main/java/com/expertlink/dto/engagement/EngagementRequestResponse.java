@@ -22,6 +22,8 @@ public record EngagementRequestResponse(
         LocalDateTime startAt,
         LocalDateTime endAt,
         String taskDescription,
+        List<Long> designatedExpertIds,
+        List<String> designatedExpertNames,
         Long designatedExpertId,
         String designatedExpertName,
         Long assignedExpertId,

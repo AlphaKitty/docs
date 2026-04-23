@@ -4,17 +4,28 @@ import com.expertlink.domain.Domain;
 import com.expertlink.domain.Expert;
 import com.expertlink.domain.User;
 import com.expertlink.dto.domain.DomainStatsResponse;
+import com.expertlink.dto.importing.ImportErrorRow;
+import com.expertlink.dto.importing.ImportResultResponse;
 import com.expertlink.repository.DomainRepository;
 import com.expertlink.repository.ExpertRepository;
 import com.expertlink.repository.ProjectRepository;
 import com.expertlink.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -117,6 +128,118 @@ public class DomainService {
      */
     public Optional<Domain> findByName(String name) {
         return domainRepository.findByName(name);
+    }
+
+    public byte[] buildImportTemplate() {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("domains");
+            Row header = sheet.createRow(0);
+            String[] columns = {"name", "parentName", "level", "isActive", "description"};
+            for (int i = 0; i < columns.length; i++) {
+                header.createCell(i).setCellValue(columns[i]);
+                sheet.setColumnWidth(i, 22 * 256);
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("生成领域导入模板失败", e);
+        }
+    }
+
+    @Transactional
+    public ImportResultResponse importDomains(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请上传 domains.xlsx 文件");
+        }
+        List<ImportErrorRow> errors = new ArrayList<>();
+        int total = 0;
+        int success = 0;
+        int skipped = 0;
+        try (XSSFWorkbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
+            if (sheet == null) {
+                throw new IllegalArgumentException("文件中不存在工作表");
+            }
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null || isBlankRow(row, 5)) {
+                    continue;
+                }
+                total++;
+                try {
+                    String name = readString(row.getCell(0));
+                    if (!StringUtils.hasText(name)) {
+                        throw new IllegalArgumentException("name 为必填");
+                    }
+                    if (domainRepository.existsByName(name.trim())) {
+                        skipped++;
+                        continue;
+                    }
+                    Domain domain = new Domain();
+                    domain.setName(name.trim());
+                    String parentName = readString(row.getCell(1));
+                    if (StringUtils.hasText(parentName)) {
+                        Domain parent = domainRepository.findByName(parentName.trim())
+                                .orElseThrow(() -> new IllegalArgumentException("父领域不存在: " + parentName));
+                        domain.setParent(parent);
+                        domain.setParentId(parent.getId());
+                        domain.setLevel(parent.getLevel() + 1);
+                    } else {
+                        Integer level = readInteger(row.getCell(2));
+                        domain.setLevel(level == null || level < 1 ? 1 : level);
+                    }
+
+                    String activeText = readString(row.getCell(3));
+                    domain.setIsActive(!"false".equalsIgnoreCase(activeText));
+                    domain.setDescription(readString(row.getCell(4)));
+                    domain.setDisplayOrder(0);
+                    domain.setExpertCount(0);
+                    domain.setProjectCount(0);
+                    domain.setCreatedAt(LocalDateTime.now());
+                    domain.setUpdatedAt(LocalDateTime.now());
+                    domainRepository.save(domain);
+                    success++;
+                } catch (Exception ex) {
+                    errors.add(ImportErrorRow.builder()
+                            .row(i + 1)
+                            .message(ex.getMessage())
+                            .build());
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("解析 domains.xlsx 失败", e);
+        }
+
+        return ImportResultResponse.builder()
+                .total(total)
+                .success(success)
+                .failed(errors.size())
+                .skipped(skipped)
+                .errors(errors)
+                .build();
+    }
+
+    private static String readString(Cell cell) {
+        if (cell == null) return null;
+        CellType type = cell.getCellType();
+        if (type == CellType.STRING) return cell.getStringCellValue();
+        if (type == CellType.NUMERIC) return String.valueOf((long) cell.getNumericCellValue());
+        if (type == CellType.BOOLEAN) return String.valueOf(cell.getBooleanCellValue());
+        return null;
+    }
+
+    private static Integer readInteger(Cell cell) {
+        String text = readString(cell);
+        if (!StringUtils.hasText(text)) return null;
+        return Integer.parseInt(text.trim());
+    }
+
+    private static boolean isBlankRow(Row row, int expectedCols) {
+        for (int i = 0; i < expectedCols; i++) {
+            if (StringUtils.hasText(readString(row.getCell(i)))) return false;
+        }
+        return true;
     }
 
     /**

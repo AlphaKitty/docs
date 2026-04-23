@@ -3,7 +3,15 @@
     <div class="page-header">
       <h2>专家管理</h2>
       <div class="header-actions">
-        <el-button icon="Download">导出数据</el-button>
+        <el-button :icon="Download" @click="downloadTemplate">下载导入模板</el-button>
+        <el-button type="primary" @click="triggerImport">批量导入专家</el-button>
+        <input
+          ref="importInputRef"
+          type="file"
+          accept=".xlsx"
+          style="display: none"
+          @change="onImportFileChange"
+        />
       </div>
     </div>
     
@@ -124,6 +132,7 @@ import { useRouter } from 'vue-router'
 import { useExpertStore, type Expert } from '@/stores/expert'
 import { Search, Download, View, Edit, Delete } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ExpertService } from '@/api/services/expert.service'
 
 const router = useRouter()
 const expertStore = useExpertStore()
@@ -132,6 +141,7 @@ const searchKeyword = ref('')
 const filterStatus = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
+const importInputRef = ref<HTMLInputElement | null>(null)
 
 const filteredExperts = computed(() => {
   let experts = expertStore.experts
@@ -214,6 +224,45 @@ const deleteExpert = (expert: Expert) => {
   }).catch(() => {
     // 取消删除
   })
+}
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const downloadTemplate = async () => {
+  try {
+    const blob = await ExpertService.downloadImportTemplate()
+    saveBlob(blob, 'experts-template.xlsx')
+  } catch (error: any) {
+    ElMessage.error(error?.message || '下载模板失败')
+  }
+}
+
+const triggerImport = () => {
+  importInputRef.value?.click()
+}
+
+const onImportFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const result = await ExpertService.importExperts(file)
+    ElMessage.success(`导入完成：总计${result.data.total}，成功${result.data.success}，跳过${result.data.skipped}，失败${result.data.failed}`)
+    await expertStore.fetchExperts()
+  } catch (error: any) {
+    ElMessage.error(error?.message || '导入失败')
+  } finally {
+    input.value = ''
+  }
 }
 
 onMounted(async () => {

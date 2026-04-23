@@ -67,7 +67,7 @@ export class EngagementRequestService {
 
   static async patchDraft(
     id: number,
-    body: Partial<CreateEngagementDraftPayload> & { designatedExpertId?: number | null }
+    body: Partial<CreateEngagementDraftPayload> & { designatedExpertIds?: number[] | null }
   ): Promise<EngagementRequestRow> {
     try {
       const response = await apiClient.put<ApiResponse<EngagementRequestRow>>(`/engagement-requests/${id}`, body)

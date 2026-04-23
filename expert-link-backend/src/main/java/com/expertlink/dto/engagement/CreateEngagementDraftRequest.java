@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class CreateEngagementDraftRequest {
@@ -27,6 +28,6 @@ public class CreateEngagementDraftRequest {
     /** 草稿阶段可空，提交前必填 */
     private String taskDescription;
 
-    /** 点名模式下可选 */
-    private Long designatedExpertId;
+    /** 点名模式下可选（支持多选） */
+    private List<Long> designatedExpertIds;
 }
