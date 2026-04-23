@@ -92,7 +92,7 @@ export class ExpertService {
   static async getUserCandidates(
     keyword: string,
     page = 0,
-    size = 20
+    size = 50
   ): Promise<PaginatedResponse<UserPickerItem>> {
     try {
       const res = await apiClient.get<ApiResponse<PaginatedResponse<UserPickerItem>>>(

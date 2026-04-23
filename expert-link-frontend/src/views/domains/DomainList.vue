@@ -51,14 +51,19 @@
         v-model="selectedOwnerIds"
         multiple
         filterable
+        remote
+        clearable
+        reserve-keyword
+        :remote-method="remoteSearchUsers"
+        :loading="userSearchLoading"
         collapse-tags
-        placeholder="选择用户（已是专家的用户会自动跳过）"
+        placeholder="输入姓名/邮箱搜索用户（已是专家会自动跳过）"
         style="width: 100%"
       >
         <el-option
           v-for="u in users"
           :key="u.id"
-          :label="`${u.username}${u.fullName ? `（${u.fullName}）` : ''}`"
+          :label="`${u.fullName || u.username} (${u.email})`"
           :value="u.id"
         />
       </el-select>
@@ -84,6 +89,7 @@ const loading = ref(false)
 const rows = ref<DomainDetail[]>([])
 const total = ref(0)
 const users = ref<UserPickerItem[]>([])
+const userSearchLoading = ref(false)
 const batchDialogVisible = ref(false)
 const batchSubmitting = ref(false)
 const currentDomain = ref<DomainDetail | null>(null)
@@ -153,12 +159,19 @@ const openBatchAdd = async (domain: DomainDetail) => {
   currentDomain.value = domain
   selectedOwnerIds.value = []
   batchDialogVisible.value = true
-  if (users.value.length > 0) return
+  await remoteSearchUsers('')
+}
+
+const remoteSearchUsers = async (keyword: string) => {
+  userSearchLoading.value = true
   try {
-    const res = await ExpertService.getUserCandidates('', 0, 500)
+    const res = await ExpertService.getUserCandidates(keyword || '', 0, 50)
     users.value = res.content || []
   } catch (error: unknown) {
+    users.value = []
     ElMessage.error((error as Error)?.message || '加载待纳入用户失败')
+  } finally {
+    userSearchLoading.value = false
   }
 }
 
