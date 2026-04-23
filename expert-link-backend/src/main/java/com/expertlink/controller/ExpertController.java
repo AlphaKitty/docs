@@ -11,6 +11,8 @@ import com.expertlink.service.ExpertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -48,7 +50,7 @@ public class ExpertController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','DEPT_ADMIN')")
     public ResponseEntity<ApiResponse<PaginatedResponse<UserPickerDto>>> userCandidates(
             @RequestParam(required = false) String keyword,
-            Pageable pageable) {
+            @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Page<UserPickerDto> page = expertService.listUserCandidates(keyword, pageable);
         return ApiResponses.okPage(page);
     }
