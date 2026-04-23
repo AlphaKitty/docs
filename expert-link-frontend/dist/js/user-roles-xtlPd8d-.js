@@ -1,1 +1,0 @@
-const E=[{value:"SUPER_ADMIN",label:"超级管理员"},{value:"DOMAIN_STEWARD",label:"领域行管"},{value:"DEPT_ADMIN",label:"部门管理员"},{value:"EXPERT_USER",label:"专家用户"},{value:"REGULAR_USER",label:"普通用户"},{value:"VISITOR",label:"访客"}];function R(l){var a;return((a=E.find(e=>e.value===l))==null?void 0:a.label)??l}export{E as U,R as r};
