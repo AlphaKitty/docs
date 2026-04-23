@@ -283,11 +283,15 @@ public class UserService {
         return user;
     }
 
-    public Page<User> searchUsers(String keyword, Pageable pageable) {
-        if (!StringUtils.hasText(keyword)) {
+    public Page<User> searchUsers(String keyword, String role, Pageable pageable) {
+        String kw = StringUtils.hasText(keyword) ? keyword.trim() : "";
+        if (StringUtils.hasText(role)) {
+            return userRepository.searchByKeywordAndRole(kw, role.trim(), pageable);
+        }
+        if (!StringUtils.hasText(kw)) {
             return userRepository.findAll(pageable);
         }
-        return userRepository.searchByKeyword(keyword.trim(), pageable);
+        return userRepository.searchByKeyword(kw, pageable);
     }
 
     public boolean checkEmailExists(String email) {

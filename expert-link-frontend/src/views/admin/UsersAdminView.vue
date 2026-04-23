@@ -8,12 +8,23 @@
       </div>
     </div>
 
+    <div class="search-bar">
+      <el-input
+        v-model="keyword"
+        clearable
+        placeholder="按用户名/邮箱/姓名搜索"
+        @keyup.enter="onSearch"
+        @clear="onSearch"
+      />
+      <el-button type="primary" @click="onSearch">搜索</el-button>
+    </div>
+
     <el-table v-loading="loading" :data="rows" border>
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="username" label="用户名" width="120" />
-      <el-table-column prop="email" label="邮箱" min-width="180" />
+      <el-table-column prop="username" label="用户名" width="150" show-overflow-tooltip />
+      <el-table-column prop="email" label="邮箱" width="220" show-overflow-tooltip />
       <el-table-column prop="fullName" label="姓名" width="120" />
-      <el-table-column label="角色" min-width="200">
+      <el-table-column label="角色" width="180" show-overflow-tooltip>
         <template #default="{ row }">
           <el-tag v-for="r in normalizeRoles(row)" :key="r" size="small" class="role-tag">{{ roleLabel(r) }}</el-tag>
         </template>
@@ -92,6 +103,7 @@ const rows = ref<AdminUserRow[]>([])
 const total = ref(0)
 const page = ref(1)
 const size = ref(20)
+const keyword = ref('')
 
 const createVisible = ref(false)
 const createFormRef = ref<FormInstance>()
@@ -128,7 +140,7 @@ const normalizeRoles = (row: AdminUserRow) => {
 const load = async () => {
   loading.value = true
   try {
-    const res = await UserAdminService.getUsers(page.value - 1, size.value)
+    const res = await UserAdminService.searchUsers(keyword.value, page.value - 1, size.value)
     rows.value = res.content
     total.value = res.totalElements
   } catch (e: any) {
@@ -136,6 +148,11 @@ const load = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const onSearch = async () => {
+  page.value = 1
+  await load()
 }
 
 const openCreate = () => {
@@ -233,6 +250,11 @@ void load()
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 .role-tag {
   margin-right: 4px;

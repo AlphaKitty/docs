@@ -36,11 +36,12 @@ export class UserAdminService {
   static async searchUsers(
     keyword: string,
     page = 0,
-    size = 50
+    size = 50,
+    role?: string
   ): Promise<PaginatedResponse<AdminUserRow>> {
     try {
       const response = await apiClient.get<ApiResponse<PaginatedResponse<AdminUserRow>>>('/users/search', {
-        params: { keyword: keyword || undefined, page, size },
+        params: { keyword: keyword || undefined, role: role || undefined, page, size },
       })
       return response.data
     } catch (error) {

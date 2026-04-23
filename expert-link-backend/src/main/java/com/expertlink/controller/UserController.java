@@ -163,8 +163,9 @@ public class UserController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<PaginatedResponse<User>>> searchUsers(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role,
             @PageableDefault(size = 50, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<User> users = userService.searchUsers(keyword, pageable);
+        Page<User> users = userService.searchUsers(keyword, role, pageable);
         return ApiResponses.okPage(users);
     }
 
