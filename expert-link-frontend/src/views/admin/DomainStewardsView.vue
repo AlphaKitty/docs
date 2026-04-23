@@ -53,7 +53,7 @@ const savingId = ref<number | null>(null)
 
 const stewardIds = (row: DomainDetail) => pending.value[row.id] ?? (row as any).stewards?.map((s: any) => s.id) ?? []
 
-const userLabel = (u: AdminUserRow) => `${u.username}${u.fullName ? '（' + u.fullName + '）' : ''}`
+const userLabel = (u: AdminUserRow) => `${u.fullName || u.username} (${u.email})`
 
 const onPick = (row: DomainDetail, ids: number[]) => {
   pending.value = { ...pending.value, [row.id]: ids }
@@ -64,7 +64,7 @@ const load = async () => {
   try {
     const [dRes, uRes] = await Promise.all([
       DomainService.getDomains({ page: 0, size: 200 }),
-      UserAdminService.searchUsers('', 0, 50),
+      UserAdminService.searchUsers('', 0, 50, 'DOMAIN_STEWARD'),
     ])
     domains.value = dRes.content
     users.value = uRes.content
@@ -79,7 +79,7 @@ const load = async () => {
 const remoteSearchUsers = async (keyword: string) => {
   usersLoading.value = true
   try {
-    const res = await UserAdminService.searchUsers(keyword || '', 0, 50)
+    const res = await UserAdminService.searchUsers(keyword || '', 0, 50, 'DOMAIN_STEWARD')
     users.value = res.content || []
   } catch (e: any) {
     users.value = []
