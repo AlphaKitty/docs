@@ -40,9 +40,9 @@
         </el-descriptions-item>
         <el-descriptions-item label="申请人">{{ row.applicantUsername }}</el-descriptions-item>
         <el-descriptions-item label="模式">{{ row.mode }}</el-descriptions-item>
-        <el-descriptions-item label="类型">{{ row.taskType }}</el-descriptions-item>
-        <el-descriptions-item label="开始">{{ row.startAt }}</el-descriptions-item>
-        <el-descriptions-item label="结束">{{ row.endAt || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="类型">{{ taskTypeLabel(row.taskType) }}</el-descriptions-item>
+        <el-descriptions-item label="开始">{{ formatDateTimeDisplay(row.startAt) }}</el-descriptions-item>
+        <el-descriptions-item label="结束">{{ formatDateTimeDisplay(row.endAt) }}</el-descriptions-item>
         <el-descriptions-item label="任务描述" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
         <el-descriptions-item label="指定专家">
           {{
@@ -70,10 +70,14 @@
       <el-card v-if="row.reassignmentLog?.length" class="mt" shadow="never">
         <template #header>改派记录</template>
         <el-table :data="row.reassignmentLog" border size="small">
-          <el-table-column prop="at" label="时间" width="170" />
-          <el-table-column prop="fromExpertName" label="原专家" />
-          <el-table-column prop="toExpertName" label="新专家" />
-          <el-table-column prop="reason" label="原因" show-overflow-tooltip />
+            <el-table-column prop="at" label="时间" width="170" align="center">
+              <template #default="{ row: logRow }">
+                {{ formatDateTimeDisplay(logRow.at) }}
+              </template>
+            </el-table-column>
+          <el-table-column prop="fromExpertName" label="原专家" align="center" />
+          <el-table-column prop="toExpertName" label="新专家" align="center" />
+          <el-table-column prop="reason" label="原因" show-overflow-tooltip align="center" />
         </el-table>
       </el-card>
 
@@ -238,6 +242,7 @@ import { EngagementRequestService } from '@/api/services/engagement-request.serv
 import { ExpertService } from '@/api/services/expert.service'
 import type { ExpertDetail } from '@/api/types/expert'
 import type { EngagementRequestRow } from '@/api/types/engagement'
+import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
 
 const route = useRoute()
 const auth = useAuthStore()

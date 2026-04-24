@@ -4,10 +4,11 @@
       <h2>领域行管配置</h2>
       <el-button @click="load">刷新</el-button>
     </div>
-    <el-table v-loading="loading" :data="domains" row-key="id" border>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="name" label="领域" min-width="140" />
-      <el-table-column label="行管用户" min-width="280">
+    <div class="table-container">
+      <el-table v-loading="loading" :data="domains" row-key="id" border table-layout="fixed">
+        <el-table-column prop="id" label="ID" width="70" align="center" />
+        <el-table-column prop="name" label="领域" min-width="220" show-overflow-tooltip align="center" />
+        <el-table-column label="行管用户" min-width="360" align="center">
         <template #default="{ row }">
           <el-select
             :model-value="stewardIds(row)"
@@ -27,12 +28,13 @@
           </el-select>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right" align="center">
         <template #default="{ row }">
           <el-button type="primary" size="small" :loading="savingId === row.id" @click="save(row)">保存</el-button>
         </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+      </el-table>
+    </div>
   </div>
 </template>
 
@@ -124,12 +126,18 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .page {
-  padding: 8px;
+  padding: 20px;
 }
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 </style>

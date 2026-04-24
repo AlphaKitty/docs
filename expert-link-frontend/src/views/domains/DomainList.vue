@@ -3,7 +3,7 @@
     <el-card class="header-card" shadow="never">
       <div class="header-row">
         <div>
-          <h2>领域管理</h2>
+          <h2>专家入库</h2>
           <p>维护领域层级、状态及专家/项目关联概况。</p>
         </div>
         <div class="header-actions">
@@ -26,13 +26,14 @@
       <el-table
         v-loading="loading"
         :data="treeRows"
+        table-layout="fixed"
         border
         row-key="id"
         :tree-props="{ children: 'children' }"
         :default-expand-all="false"
       >
         <el-table-column prop="id" label="ID" width="80" align="center" />
-        <el-table-column prop="name" label="领域名称" min-width="80" align="center" />
+        <el-table-column prop="name" label="领域名称" min-width="260" align="center" show-overflow-tooltip />
         <el-table-column prop="level" label="层级" width="90" align="center" />
         <el-table-column prop="expertCount" label="专家数" width="100" align="center" />
         <el-table-column prop="projectCount" label="项目数" width="100" align="center" />
@@ -43,7 +44,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right" align="center">
+        <el-table-column label="操作" width="240" fixed="right" align="center">
           <template #default="{ row }">
             <el-button link type="primary" @click="openBatchAdd(row)">纳入专家</el-button>
             <el-button link type="primary" @click="goDetail(row.id)">详情</el-button>

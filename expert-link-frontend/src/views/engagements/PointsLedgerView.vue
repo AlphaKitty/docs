@@ -5,12 +5,17 @@
       <el-button @click="reload">刷新</el-button>
     </div>
     <p class="hint">结项放分时按行管确认分入账专家账号关联用户，以下为本人流水。</p>
-    <el-table :data="rows" border stripe style="width: 100%">
-      <el-table-column prop="createdAt" label="时间" min-width="160" />
-      <el-table-column prop="pointsDelta" label="变动" width="100" />
-      <el-table-column prop="balanceAfter" label="余额" width="100" />
-      <el-table-column prop="reasonCode" label="原因" width="160" />
-      <el-table-column prop="engagementRequestId" label="申请单" width="120">
+    <div class="table-container">
+      <el-table :data="rows" border stripe style="width: 100%" table-layout="fixed">
+        <el-table-column prop="createdAt" label="时间" min-width="180" align="center">
+          <template #default="{ row }">
+            {{ formatDateTimeDisplay(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="pointsDelta" label="变动" width="120" align="center" />
+        <el-table-column prop="balanceAfter" label="余额" width="120" align="center" />
+        <el-table-column prop="reasonCode" label="原因" min-width="220" show-overflow-tooltip align="center" />
+        <el-table-column prop="engagementRequestId" label="申请单" width="140" align="center">
         <template #default="{ row }">
           <el-link
             v-if="row.engagementRequestId"
@@ -21,8 +26,9 @@
           </el-link>
           <span v-else>—</span>
         </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+      </el-table>
+    </div>
     <div class="pager">
       <el-pagination
         v-model:current-page="page"
@@ -39,6 +45,7 @@ import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { PointsService } from '@/api/services/points.service'
 import type { PointsLedgerEntryRow } from '@/api/types/points'
+import { formatDateTimeDisplay } from '@/utils/display-format'
 
 const loading = ref(false)
 const rows = ref<PointsLedgerEntryRow[]>([])
@@ -75,8 +82,7 @@ watch(size, () => {
 
 <style scoped>
 .page {
-  padding: 16px;
-  max-width: 960px;
+  padding: 20px;
 }
 .head {
   display: flex;
@@ -96,5 +102,11 @@ watch(size, () => {
   margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+}
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 </style>

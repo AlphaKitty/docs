@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="page-header">
-      <h2>菜单级授权体系</h2>
+      <h2>菜单授权</h2>
       <div>
         <el-button @click="reload">刷新</el-button>
         <el-button type="primary" :loading="saving" @click="save">保存授权</el-button>
@@ -15,7 +15,7 @@
     />
     <div class="section-title">顶级菜单</div>
     <el-table v-loading="loading" :data="topLevelRows" border size="small" class="mb">
-      <el-table-column prop="menuKey" label="菜单" min-width="220" fixed="left">
+      <el-table-column prop="menuKey" label="菜单" min-width="220" fixed="left" align="center">
         <template #default="{ row }">
           {{ menuLabel(row.menuKey) }}
         </template>
@@ -25,6 +25,7 @@
         :key="role"
         :label="roleLabel(role)"
         width="160"
+        align="center"
       >
         <template #default="{ row }">
           <el-checkbox v-model="row.permissions[role]" />
@@ -43,7 +44,7 @@
           <el-tag size="small" type="info">{{ group.rows.length }}</el-tag>
         </template>
         <el-table v-loading="loading" :data="group.rows" border size="small">
-          <el-table-column prop="menuKey" label="菜单" min-width="220" fixed="left">
+          <el-table-column prop="menuKey" label="菜单" min-width="220" fixed="left" align="center">
             <template #default="{ row }">
               {{ menuLabel(row.menuKey) }}
             </template>
@@ -53,6 +54,7 @@
             :key="role"
             :label="roleLabel(role)"
             width="160"
+            align="center"
           >
             <template #default="{ row }">
               <el-checkbox v-model="row.permissions[role]" />
@@ -89,7 +91,7 @@ const menuLabelMap: Record<string, string> = {
   'engagements.expertPending': '专家待确认',
   'engagements.pointsLedger': '积分台账',
   experts: '专家管理',
-  domains: '领域管理',
+  domains: '专家入库',
   skills: '技能管理',
   projects: '项目列表',
   analysis: '统计分析',

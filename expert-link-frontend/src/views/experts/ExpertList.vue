@@ -17,42 +17,45 @@
     </div>
     
     <div class="search-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索专家姓名、技能或公司"
-        clearable
-        style="width: 300px"
-        @input="handleSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-      
-      <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilter">
-        <el-option label="可用" value="available" />
-        <el-option label="忙碌" value="busy" />
-        <el-option label="不可用" value="unavailable" />
-      </el-select>
+      <div class="search-controls">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索专家姓名、技能或公司"
+          clearable
+          @keyup.enter="handleSearch"
+          @input="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+
+        <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilter">
+          <el-option label="可用" value="available" />
+          <el-option label="忙碌" value="busy" />
+          <el-option label="不可用" value="unavailable" />
+        </el-select>
+      </div>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
     
     <div class="table-container">
-      <el-table :data="filteredExperts" style="width: 100%">
+      <el-table :data="filteredExperts" style="width: 100%" table-layout="fixed">
         <el-table-column label="头像" width="60" align="center">
           <template #default="{ row }">
             <el-avatar :size="32" :src="row.avatar" />
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="姓名" width="120" align="center">
+        <el-table-column prop="name" label="姓名" width="120" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="expert-name">{{ row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="职位" width="150" align="center" />
+        <el-table-column prop="title" label="职位" min-width="180" align="center" show-overflow-tooltip />
         
         <!-- <el-table-column prop="company" label="公司" width="150" align="center" /> -->
         
-        <el-table-column prop="skills" label="技能" align="center">
+        <el-table-column prop="skills" label="技能" min-width="220" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tag
               v-for="skill in row.skills.slice(0, 3)"
@@ -65,7 +68,7 @@
             <span v-if="row.skills.length > 3" class="more-skills">+{{ row.skills.length - 3 }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="domains" label="领域" min-width="180" align="center">
+        <el-table-column prop="domains" label="领域" min-width="200" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-tag
               v-for="d in (row.domains || []).slice(0, 3)"
@@ -81,7 +84,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="experience" label="经验" width="80" align="center">
+        <el-table-column prop="experience" label="经验" width="100" align="center">
           <template #default="{ row }">
             {{ row.experience }}年
           </template>
@@ -95,13 +98,13 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="rating" label="评分" width="100" align="center">
+        <el-table-column prop="rating" label="评分" width="160" align="center">
           <template #default="{ row }">
             <el-rate v-model="row.rating" disabled show-score text-color="#ff9900" />
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" min-width="80" fixed="right" align="center">
+        <el-table-column label="操作" width="110" fixed="right" align="center">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button type="primary" size="small" :icon="View" @click="viewExpert(row)"></el-button>
@@ -315,8 +318,26 @@ onMounted(async () => {
 
 .search-bar {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+}
+
+.search-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-controls :deep(.el-input) {
+  width: 320px;
+}
+
+.search-controls :deep(.el-select) {
+  width: 180px;
 }
 
 .table-container {

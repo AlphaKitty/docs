@@ -9,38 +9,42 @@
     </div>
 
     <div class="search-bar">
-      <el-input
-        v-model="keyword"
-        clearable
-        placeholder="按用户名/邮箱/姓名搜索"
-        @keyup.enter="onSearch"
-        @clear="onSearch"
-      />
+      <div class="search-controls">
+        <el-input
+          v-model="keyword"
+          clearable
+          placeholder="按用户名/邮箱/姓名搜索"
+          @keyup.enter="onSearch"
+          @clear="onSearch"
+        />
+      </div>
       <el-button type="primary" @click="onSearch">搜索</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="rows" border>
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="username" label="用户名" width="150" show-overflow-tooltip />
-      <el-table-column prop="email" label="邮箱" width="220" show-overflow-tooltip />
-      <el-table-column prop="fullName" label="姓名" width="120" />
-      <el-table-column label="角色" width="180" show-overflow-tooltip>
+    <div class="table-container">
+      <el-table v-loading="loading" :data="rows" border table-layout="fixed">
+        <el-table-column prop="id" label="ID" width="70" align="center" />
+        <el-table-column prop="username" label="用户名" min-width="160" show-overflow-tooltip align="center" />
+        <el-table-column prop="email" label="邮箱" min-width="220" show-overflow-tooltip align="center" />
+        <el-table-column prop="fullName" label="姓名" width="120" align="center" />
+        <el-table-column label="角色" min-width="200" show-overflow-tooltip align="center">
         <template #default="{ row }">
           <el-tag v-for="r in normalizeRoles(row)" :key="r" size="small" class="role-tag">{{ roleLabel(r) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="isActive" label="状态" width="90">
+        <el-table-column prop="isActive" label="状态" width="100" align="center">
         <template #default="{ row }">
           <el-tag :type="row.isActive ? 'success' : 'info'" size="small">{{ row.isActive ? '启用' : '禁用' }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right" align="center">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="openRoles(row)">角色</el-button>
           <el-button type="danger" link size="small" @click="remove(row)">删除</el-button>
         </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <div class="pager">
       <el-pagination
@@ -238,7 +242,7 @@ void load()
 
 <style scoped>
 .page {
-  padding: 8px;
+  padding: 20px;
 }
 .page-header {
   display: flex;
@@ -253,8 +257,22 @@ void load()
 }
 .search-bar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.search-controls {
+  flex: 1;
+}
+.search-controls :deep(.el-input) {
+  width: 320px;
+}
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 .role-tag {
   margin-right: 4px;

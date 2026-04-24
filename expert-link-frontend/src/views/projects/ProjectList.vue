@@ -9,38 +9,42 @@
     </div>
     
     <div class="search-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索项目名称或描述"
-        clearable
-        @input="handleSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-      
-      <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilter">
-        <el-option label="进行中" value="in_progress" />
-        <el-option label="已完成" value="completed" />
-        <el-option label="已取消" value="cancelled" />
-        <el-option label="待开始" value="pending" />
-      </el-select>
-      
-      <el-date-picker
-        v-model="dateRange"
-        type="daterange"
-        range-separator="至"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
-        value-format="YYYY-MM-DD"
-        @change="handleDateFilter"
-      />
+      <div class="search-controls">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索项目名称或描述"
+          clearable
+          @keyup.enter="handleSearch"
+          @input="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+
+        <el-select v-model="filterStatus" placeholder="状态筛选" clearable @change="handleFilter">
+          <el-option label="进行中" value="in_progress" />
+          <el-option label="已完成" value="completed" />
+          <el-option label="已取消" value="cancelled" />
+          <el-option label="待开始" value="pending" />
+        </el-select>
+
+        <el-date-picker
+          v-model="dateRange"
+          type="daterange"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          value-format="YYYY-MM-DD"
+          @change="handleDateFilter"
+        />
+      </div>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
     
     <div class="project-table">
       <el-table :data="paginatedProjects" style="width: 100%" table-layout="fixed">
-        <el-table-column prop="name" label="项目名称" min-width="150" align="center" show-overflow-tooltip />
+        <el-table-column prop="name" label="项目名称" min-width="200" align="center" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
@@ -53,7 +57,7 @@
             <span>{{ row.startDate || '-' }} ~ {{ row.endDate || '-' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="manager" label="负责人" width="100" align="center" show-overflow-tooltip />
+        <el-table-column prop="manager" label="负责人" width="120" align="center" show-overflow-tooltip />
         <el-table-column label="预算" width="110" align="center">
           <template #default="{ row }">
             ¥{{ Number(row.budget || 0).toLocaleString() }}
@@ -64,7 +68,7 @@
             <el-progress :percentage="row.progress" :status="getProgressStatus(row.progress)" />
           </template>
         </el-table-column>
-        <el-table-column label="关键技能" min-width="140" align="center">
+        <el-table-column label="关键技能" min-width="180" align="center">
           <template #default="{ row }">
             <el-tag
               v-for="skill in row.requiredSkills.slice(0, 3)"
@@ -79,8 +83,8 @@
             <span v-if="row.requiredSkills.length === 0" class="more-skills">—</span>
           </template>
         </el-table-column>
-        <el-table-column prop="description" label="描述" min-width="160" show-overflow-tooltip align="center" />
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip align="center" />
+        <el-table-column label="操作" width="130" align="center" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button type="primary" size="small" :icon="View" circle @click="viewProject(row)" />
@@ -270,18 +274,30 @@ onMounted(async () => {
 
 .search-bar {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
-  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.search-controls {
+  display: flex;
+  gap: 12px;
+  flex: 1;
   align-items: center;
   min-width: 0;
 }
 
-.search-bar :deep(.el-input),
-.search-bar :deep(.el-select),
-.search-bar :deep(.el-date-editor) {
-  flex: 1 1 0;
-  min-width: 0;
+.search-controls :deep(.el-input) {
+  width: 320px;
+}
+
+.search-controls :deep(.el-select) {
+  width: 180px;
+}
+
+.search-controls :deep(.el-date-editor) {
+  width: 340px;
 }
 
 .project-table {
