@@ -199,11 +199,11 @@ test('创建项目 -> 提交 -> 查看详情', async ({ page }) => {
   await page.locator('input[placeholder="选择结束日期"]').fill('2026-06-30')
   await page.locator('input[placeholder="请输入预算金额"]').fill('100000')
 
-  await page.locator('input[placeholder="请选择所需技能"]').click()
-  await page.getByText('Playwright', { exact: true }).click()
+  await page.locator('.el-form-item:has-text("所需技能") .el-select').first().click()
+  await page.getByRole('option', { name: 'Playwright' }).click()
 
-  await page.locator('input[placeholder="请选择项目负责人"]').click()
-  await page.getByText('管理员A', { exact: true }).click()
+  await page.locator('.el-form-item:has-text("项目负责人") .el-select').first().click()
+  await page.getByRole('option', { name: '管理员A' }).click()
 
   await page.getByRole('button', { name: '提交' }).click()
 
