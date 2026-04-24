@@ -208,7 +208,15 @@
     <el-dialog v-model="assignExpertDialogVisible" title="分配专家" width="480px">
       <el-form label-width="100px">
         <el-form-item label="选择专家">
-          <el-select v-model="assignExpertForm.expertId" placeholder="请选择专家" style="width: 100%">
+          <el-select
+            v-model="assignExpertForm.expertIds"
+            multiple
+            filterable
+            clearable
+            collapse-tags
+            placeholder="请选择专家（可多选）"
+            style="width: 100%"
+          >
             <el-option
               v-for="expert in assignableExperts"
               :key="expert.id"
@@ -260,7 +268,7 @@ const allExperts = ref<Array<{ id: number; name: string; title?: string }>>([])
 const assignExpertDialogVisible = ref(false)
 const assigningExpert = ref(false)
 const assignExpertForm = ref({
-  expertId: undefined as number | undefined,
+  expertIds: [] as number[],
   role: '项目成员',
   startDate: '',
   totalHours: 40,
@@ -590,7 +598,7 @@ const editProject = () => {
 // 匹配专家
 const matchExperts = () => {
   assignExpertForm.value = {
-    expertId: assignableExperts.value[0]?.id,
+    expertIds: assignableExperts.value[0] ? [assignableExperts.value[0].id] : [],
     role: '项目成员',
     startDate: project.value.startDate || '',
     totalHours: 40,
@@ -600,24 +608,40 @@ const matchExperts = () => {
 }
 
 const submitAssignExpert = async () => {
-  if (!assignExpertForm.value.expertId) {
-    ElMessage.warning('请先选择专家')
+  if (!assignExpertForm.value.expertIds?.length) {
+    ElMessage.warning('请至少选择一名专家')
     return
   }
 
   assigningExpert.value = true
+  const payload = {
+    projectId: project.value.id,
+    role: assignExpertForm.value.role || '项目成员',
+    startDate: assignExpertForm.value.startDate || undefined,
+    totalHours: assignExpertForm.value.totalHours,
+    responsibilities: assignExpertForm.value.responsibilities || undefined,
+  }
+  let ok = 0
+  let fail = 0
   try {
-    await ProjectExpertService.createAssignment({
-      projectId: project.value.id,
-      expertId: assignExpertForm.value.expertId,
-      role: assignExpertForm.value.role || '项目成员',
-      startDate: assignExpertForm.value.startDate || undefined,
-      totalHours: assignExpertForm.value.totalHours,
-      responsibilities: assignExpertForm.value.responsibilities || undefined
-    })
+    for (const expertId of assignExpertForm.value.expertIds) {
+      try {
+        await ProjectExpertService.createAssignment({
+          ...payload,
+          expertId,
+        })
+        ok++
+      } catch {
+        fail++
+      }
+    }
     assignExpertDialogVisible.value = false
     await syncMatchedExperts()
-    ElMessage.success('专家分配成功')
+    if (fail === 0) {
+      ElMessage.success(`已成功分配 ${ok} 名专家`)
+    } else {
+      ElMessage.warning(`分配完成：成功 ${ok} 名，失败 ${fail} 名（可能已存在关联）`)
+    }
   } catch (error: any) {
     ElMessage.error(error?.message || '专家分配失败')
   } finally {
