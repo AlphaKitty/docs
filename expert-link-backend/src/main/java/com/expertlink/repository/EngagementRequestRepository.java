@@ -18,8 +18,16 @@ public interface EngagementRequestRepository extends JpaRepository<EngagementReq
 
     Page<EngagementRequest> findByStatusInOrderByCreatedAtDesc(Collection<EngagementRequestStatus> statuses, Pageable pageable);
 
-    Page<EngagementRequest> findByAssignedExpert_IdAndStatusOrderByCreatedAtDesc(
-            Long expertId, EngagementRequestStatus status, Pageable pageable);
+    @Query("""
+            select distinct e from EngagementRequest e
+            join e.assignedExperts ae
+            where ae.id = :expertId and e.status = :status
+            order by e.createdAt desc
+            """)
+    Page<EngagementRequest> findByAssignedExpertMemberAndStatusOrderByCreatedAtDesc(
+            @Param("expertId") Long expertId,
+            @Param("status") EngagementRequestStatus status,
+            Pageable pageable);
 
     @Query("""
             select distinct e from EngagementRequest e

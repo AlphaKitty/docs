@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -88,7 +89,7 @@ public class EngagementRequestService {
     public EngagementRequestResponse getByIdForViewer(Long userId, Long id) {
         EngagementRequest e = requireEntity(id);
         assertCanView(userId, e);
-        return toResponse(e);
+        return buildResponse(e, userId);
     }
 
     private void assertCanView(Long userId, EngagementRequest e) {
@@ -101,8 +102,12 @@ public class EngagementRequestService {
         if (domainService.isUserStewardOfDomain(userId, e.getDomain().getId())) {
             return;
         }
-        if (e.getAssignedExpert() != null && isExpertOwner(userId, e.getAssignedExpert().getId())) {
-            return;
+        if (e.getAssignedExperts() != null) {
+            for (Expert ex : e.getAssignedExperts()) {
+                if (ex.getId() != null && isExpertOwner(userId, ex.getId())) {
+                    return;
+                }
+            }
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权查看该申请单");
     }
@@ -149,6 +154,153 @@ public class EngagementRequestService {
             experts.add(expert);
         }
         return experts;
+    }
+
+    private Set<Expert> resolveAssignedExperts(List<Long> expertIds, long domainId) {
+        if (expertIds == null || expertIds.isEmpty()) {
+            throw new IllegalArgumentException("请至少选择一名专家");
+        }
+        LinkedHashSet<Long> dedup = new LinkedHashSet<>();
+        for (Long id : expertIds) {
+            if (id != null && id > 0) {
+                dedup.add(id);
+            }
+        }
+        if (dedup.isEmpty()) {
+            throw new IllegalArgumentException("请至少选择一名专家");
+        }
+        Set<Expert> experts = new LinkedHashSet<>();
+        for (Long expertId : dedup) {
+            Expert expert = expertRepository.findById(expertId)
+                    .orElseThrow(() -> new IllegalArgumentException("专家不存在"));
+            assertExpertCoversRequestDomain(expert, domainId);
+            experts.add(expert);
+        }
+        return experts;
+    }
+
+    private List<Map<String, Object>> readAssignmentDecisions(String json) {
+        if (json == null || json.isBlank()) {
+            return new ArrayList<>();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {
+            });
+        } catch (Exception ex) {
+            return new ArrayList<>();
+        }
+    }
+
+    private String writeAssignmentDecisions(List<Map<String, Object>> rows) throws JsonProcessingException {
+        return objectMapper.writeValueAsString(rows);
+    }
+
+    private String initDecisionsJson(Set<Expert> experts) {
+        if (experts == null || experts.isEmpty()) {
+            return null;
+        }
+        try {
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (Expert ex : experts.stream().sorted(Comparator.comparing(Expert::getId)).toList()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("expertId", ex.getId());
+                m.put("accepted", null);
+                m.put("note", null);
+                m.put("at", null);
+                rows.add(m);
+            }
+            return writeAssignmentDecisions(rows);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("初始化专家确认状态失败", e);
+        }
+    }
+
+    private static Boolean asBooleanObject(Object o) {
+        if (o == null) {
+            return null;
+        }
+        if (o instanceof Boolean b) {
+            return b;
+        }
+        return Boolean.parseBoolean(o.toString());
+    }
+
+    private Boolean decisionAcceptedForExpert(EngagementRequest e, Long expertId) {
+        for (Map<String, Object> m : readAssignmentDecisions(e.getAssignmentExpertDecisions())) {
+            Long id = asLong(m.get("expertId"));
+            if (id != null && id.equals(expertId)) {
+                return asBooleanObject(m.get("accepted"));
+            }
+        }
+        return null;
+    }
+
+    private boolean allExpertsAccepted(EngagementRequest e) {
+        if (e.getAssignedExperts() == null || e.getAssignedExperts().isEmpty()) {
+            return false;
+        }
+        List<Map<String, Object>> rows = readAssignmentDecisions(e.getAssignmentExpertDecisions());
+        for (Expert ex : e.getAssignedExperts()) {
+            boolean ok = false;
+            for (Map<String, Object> m : rows) {
+                if (ex.getId().equals(asLong(m.get("expertId"))) && Boolean.TRUE.equals(asBooleanObject(m.get("accepted")))) {
+                    ok = true;
+                    break;
+                }
+            }
+            if (!ok) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void applyExpertDecisionRow(EngagementRequest e, Long expertId, boolean accepted, String note) {
+        List<Map<String, Object>> rows = new ArrayList<>(readAssignmentDecisions(e.getAssignmentExpertDecisions()));
+        boolean found = false;
+        for (Map<String, Object> m : rows) {
+            Long id = asLong(m.get("expertId"));
+            if (id != null && id.equals(expertId)) {
+                if (asBooleanObject(m.get("accepted")) != null) {
+                    throw new IllegalArgumentException("该专家已确认过，不能重复操作");
+                }
+                m.put("accepted", accepted);
+                m.put("note", note);
+                m.put("at", LocalDateTime.now().toString());
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            throw new IllegalArgumentException("未找到该专家的确认记录");
+        }
+        try {
+            e.setAssignmentExpertDecisions(writeAssignmentDecisions(rows));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("更新专家确认状态失败", ex);
+        }
+    }
+
+    private void appendBatchReassignmentLog(EngagementRequest e, Set<Expert> oldExperts, Set<Expert> newExperts, User steward, String reason) {
+        try {
+            String fromNames = oldExperts == null || oldExperts.isEmpty()
+                    ? "—"
+                    : oldExperts.stream().sorted(Comparator.comparing(Expert::getId)).map(Expert::getName).collect(Collectors.joining("、"));
+            String toNames = newExperts.stream().sorted(Comparator.comparing(Expert::getId)).map(Expert::getName).collect(Collectors.joining("、"));
+            List<Map<String, Object>> list = new ArrayList<>(readReassignmentLogRaw(e.getReassignmentLog()));
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("fromExpertId", null);
+            row.put("fromExpertName", fromNames);
+            row.put("toExpertId", null);
+            row.put("toExpertName", toNames);
+            row.put("byStewardId", steward.getId());
+            row.put("reason", reason);
+            row.put("at", LocalDateTime.now().toString());
+            list.add(row);
+            e.setReassignmentLog(objectMapper.writeValueAsString(list));
+        } catch (Exception ex) {
+            throw new IllegalStateException("改派记录写入失败", ex);
+        }
     }
 
     private List<String> readAttachmentUrlList(String json) {
@@ -239,24 +391,6 @@ public class EngagementRequestService {
         }
     }
 
-    private void appendReassignmentLog(EngagementRequest e, Expert fromExpert, Expert toExpert, User steward, String reason) {
-        try {
-            List<Map<String, Object>> list = new ArrayList<>(readReassignmentLogRaw(e.getReassignmentLog()));
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("fromExpertId", fromExpert != null ? fromExpert.getId() : null);
-            row.put("fromExpertName", fromExpert != null ? fromExpert.getName() : null);
-            row.put("toExpertId", toExpert.getId());
-            row.put("toExpertName", toExpert.getName());
-            row.put("byStewardId", steward.getId());
-            row.put("reason", reason);
-            row.put("at", LocalDateTime.now().toString());
-            list.add(row);
-            e.setReassignmentLog(objectMapper.writeValueAsString(list));
-        } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("改派记录写入失败", ex);
-        }
-    }
-
     private Path evaluationFilesDir(long engagementId) {
         Path root = Paths.get(uploadDir).toAbsolutePath().normalize();
         return root.resolve("engagement-requests").resolve(String.valueOf(engagementId)).resolve("evaluation-files").normalize();
@@ -275,6 +409,21 @@ public class EngagementRequestService {
             return "";
         }
         return ext;
+    }
+
+    private static List<BigDecimal> splitCreditEvenly(BigDecimal credit, int n) {
+        if (n <= 0 || credit == null) {
+            return List.of();
+        }
+        long cents = credit.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValue();
+        long each = cents / n;
+        long rem = cents % n;
+        List<BigDecimal> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            long c = each + (i < rem ? 1L : 0L);
+            out.add(BigDecimal.valueOf(c).movePointLeft(2));
+        }
+        return out;
     }
 
     private static BigDecimal computeSuggestedScore(SubmitEvaluationRequest dto) {
@@ -297,12 +446,39 @@ public class EngagementRequestService {
     }
 
     public EngagementRequestResponse toResponse(EngagementRequest e) {
+        return buildResponse(e, null);
+    }
+
+    private EngagementRequestResponse buildResponse(EngagementRequest e, Long viewerUserId) {
         List<Expert> designatedExperts = e.getDesignatedExperts() == null
                 ? List.of()
                 : e.getDesignatedExperts().stream()
                 .sorted(Comparator.comparing(Expert::getId))
                 .toList();
         Expert firstDesignated = designatedExperts.isEmpty() ? null : designatedExperts.get(0);
+
+        List<Expert> assignedExperts = e.getAssignedExperts() == null
+                ? List.of()
+                : e.getAssignedExperts().stream()
+                .sorted(Comparator.comparing(Expert::getId))
+                .toList();
+        Expert firstAssigned = assignedExperts.isEmpty() ? null : assignedExperts.get(0);
+
+        Boolean viewerPending = null;
+        Boolean viewerAmongAssigned = null;
+        if (viewerUserId != null && e.getStatus() == EngagementRequestStatus.PENDING_EXPERT_CONFIRM) {
+            Expert mine = expertRepository.findByOwnerId(viewerUserId).orElse(null);
+            if (mine != null && mine.getId() != null && e.getAssignedExperts() != null
+                    && e.getAssignedExperts().stream().anyMatch(x -> mine.getId().equals(x.getId()))) {
+                viewerAmongAssigned = true;
+                Boolean st = decisionAcceptedForExpert(e, mine.getId());
+                viewerPending = st == null;
+            } else {
+                viewerAmongAssigned = false;
+                viewerPending = false;
+            }
+        }
+
         return EngagementRequestResponse.builder()
                 .id(e.getId())
                 .referenceCode(e.getReferenceCode())
@@ -338,8 +514,12 @@ public class EngagementRequestService {
                 .designatedExpertNames(designatedExperts.stream().map(Expert::getName).toList())
                 .designatedExpertId(firstDesignated != null ? firstDesignated.getId() : null)
                 .designatedExpertName(firstDesignated != null ? firstDesignated.getName() : null)
-                .assignedExpertId(e.getAssignedExpert() != null ? e.getAssignedExpert().getId() : null)
-                .assignedExpertName(e.getAssignedExpert() != null ? e.getAssignedExpert().getName() : null)
+                .assignedExpertIds(assignedExperts.stream().map(Expert::getId).toList())
+                .assignedExpertNames(assignedExperts.stream().map(Expert::getName).toList())
+                .viewerExpertConfirmPending(viewerPending)
+                .viewerAmongAssignedExperts(viewerAmongAssigned)
+                .assignedExpertId(firstAssigned != null ? firstAssigned.getId() : null)
+                .assignedExpertName(firstAssigned != null ? firstAssigned.getName() : null)
                 .assignedByStewardId(e.getAssignedBySteward() != null ? e.getAssignedBySteward().getId() : null)
                 .assignmentNote(e.getAssignmentNote())
                 .assignedAt(e.getAssignedAt())
@@ -395,15 +575,15 @@ public class EngagementRequestService {
         if (isSuperAdmin(userId)) {
             return engagementRequestRepository.findByStatusOrderByCreatedAtDesc(
                     EngagementRequestStatus.PENDING_EXPERT_CONFIRM, pageable
-            ).map(this::toResponse);
+            ).map(e -> buildResponse(e, userId));
         }
         Expert expert = expertRepository.findByOwnerId(userId).orElse(null);
         if (expert == null) {
             return Page.empty(pageable);
         }
-        return engagementRequestRepository.findByAssignedExpert_IdAndStatusOrderByCreatedAtDesc(
+        return engagementRequestRepository.findByAssignedExpertMemberAndStatusOrderByCreatedAtDesc(
                         expert.getId(), EngagementRequestStatus.PENDING_EXPERT_CONFIRM, pageable)
-                .map(this::toResponse);
+                .map(e -> buildResponse(e, userId));
     }
 
     @Transactional
@@ -509,14 +689,16 @@ public class EngagementRequestService {
         if (!isSuperAdmin(userId) && !domainService.isUserStewardOfDomain(userId, e.getDomain().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅该领域行管或超级管理员可指派");
         }
-        Expert expert = expertRepository.findById(dto.getExpertId())
-                .orElseThrow(() -> new IllegalArgumentException("专家不存在"));
-        assertExpertCoversRequestDomain(expert, e.getDomain().getId());
+        Set<Expert> experts = resolveAssignedExperts(dto.getExpertIds(), e.getDomain().getId());
         User steward = userRepository.findById(userId).orElseThrow();
-        e.setAssignedExpert(expert);
+        e.setAssignedExperts(new LinkedHashSet<>(experts));
         e.setAssignedBySteward(steward);
         e.setAssignmentNote(dto.getAssignmentNote());
         e.setAssignedAt(LocalDateTime.now());
+        e.setAssignmentExpertDecisions(initDecisionsJson(experts));
+        e.setExpertAccepted(null);
+        e.setExpertResponseNote(null);
+        e.setExpertRespondedAt(null);
         e.setStatus(EngagementRequestStatus.PENDING_EXPERT_CONFIRM);
         return toResponse(engagementRequestRepository.save(e));
     }
@@ -532,21 +714,24 @@ public class EngagementRequestService {
         if (!isSuperAdmin(userId) && !domainService.isUserStewardOfDomain(userId, e.getDomain().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅该领域行管或超级管理员可改派");
         }
-        if (e.getAssignedExpert() == null) {
+        Set<Expert> oldExperts = e.getAssignedExperts() == null || e.getAssignedExperts().isEmpty()
+                ? new LinkedHashSet<>()
+                : new LinkedHashSet<>(e.getAssignedExperts());
+        if (oldExperts.isEmpty()) {
             throw new IllegalStateException("尚未指派专家，请使用指派接口");
         }
-        Expert newExpert = expertRepository.findById(dto.getExpertId())
-                .orElseThrow(() -> new IllegalArgumentException("专家不存在"));
-        assertExpertCoversRequestDomain(newExpert, e.getDomain().getId());
-        if (newExpert.getId().equals(e.getAssignedExpert().getId())) {
-            throw new IllegalArgumentException("新专家与当前专家相同");
+        Set<Expert> newExperts = resolveAssignedExperts(dto.getExpertIds(), e.getDomain().getId());
+        Set<Long> oldIds = oldExperts.stream().map(Expert::getId).collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> newIds = newExperts.stream().map(Expert::getId).collect(Collectors.toCollection(LinkedHashSet::new));
+        if (oldIds.equals(newIds)) {
+            throw new IllegalArgumentException("新专家名单与当前指派相同");
         }
-        Expert old = e.getAssignedExpert();
         User steward = userRepository.findById(userId).orElseThrow();
-        appendReassignmentLog(e, old, newExpert, steward, dto.getReason());
-        e.setAssignedExpert(newExpert);
+        appendBatchReassignmentLog(e, oldExperts, newExperts, steward, dto.getReason());
+        e.setAssignedExperts(new LinkedHashSet<>(newExperts));
         e.setAssignedBySteward(steward);
         e.setAssignedAt(LocalDateTime.now());
+        e.setAssignmentExpertDecisions(initDecisionsJson(newExperts));
         if (dto.getReason() != null && !dto.getReason().isBlank()) {
             String prev = e.getAssignmentNote() != null ? e.getAssignmentNote() : "";
             e.setAssignmentNote(prev.isBlank() ? "[改派] " + dto.getReason() : prev + "\n[改派] " + dto.getReason());
@@ -588,22 +773,52 @@ public class EngagementRequestService {
         if (e.getStatus() != EngagementRequestStatus.PENDING_EXPERT_CONFIRM) {
             throw new IllegalArgumentException("当前状态不需要专家确认");
         }
-        if (e.getAssignedExpert() == null) {
-            throw new IllegalStateException("未指派专家");
-        }
-        if (!isSuperAdmin(userId) && !isExpertOwner(userId, e.getAssignedExpert().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅被指派的专家本人可操作");
-        }
+        long targetExpertId = resolveTargetExpertIdForDecision(userId, e, dto);
+        boolean accepted = Boolean.TRUE.equals(dto.getAccepted());
+        applyExpertDecisionRow(e, targetExpertId, accepted, dto.getNote());
         e.setExpertRespondedAt(LocalDateTime.now());
         e.setExpertResponseNote(dto.getNote());
-        if (Boolean.TRUE.equals(dto.getAccepted())) {
+        if (!accepted) {
+            e.setExpertAccepted(false);
+            e.setStatus(EngagementRequestStatus.REJECTED);
+            return toResponse(engagementRequestRepository.save(e));
+        }
+        if (allExpertsAccepted(e)) {
             e.setExpertAccepted(true);
             e.setStatus(EngagementRequestStatus.IN_PROGRESS);
         } else {
-            e.setExpertAccepted(false);
-            e.setStatus(EngagementRequestStatus.REJECTED);
+            e.setExpertAccepted(null);
         }
         return toResponse(engagementRequestRepository.save(e));
+    }
+
+    private long resolveTargetExpertIdForDecision(Long userId, EngagementRequest e, ExpertDecisionRequest dto) {
+        if (e.getAssignedExperts() == null || e.getAssignedExperts().isEmpty()) {
+            throw new IllegalStateException("未指派专家");
+        }
+        if (isSuperAdmin(userId)) {
+            if (dto.getExpertId() != null) {
+                long tid = dto.getExpertId();
+                boolean in = e.getAssignedExperts().stream().anyMatch(x -> x.getId() != null && x.getId() == tid);
+                if (!in) {
+                    throw new IllegalArgumentException("expertId 不在当前指派名单中");
+                }
+                return tid;
+            }
+            Expert selfExpert = expertRepository.findByOwnerId(userId).orElse(null);
+            if (selfExpert != null
+                    && selfExpert.getId() != null
+                    && e.getAssignedExperts().stream().anyMatch(x -> selfExpert.getId().equals(x.getId()))) {
+                return selfExpert.getId();
+            }
+            throw new IllegalArgumentException("超级管理员代为确认时请传 expertId");
+        }
+        Expert mine = expertRepository.findByOwnerId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "仅专家账号可操作"));
+        if (e.getAssignedExperts().stream().noneMatch(x -> mine.getId().equals(x.getId()))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅被指派的专家本人可操作");
+        }
+        return mine.getId();
     }
 
     @Transactional
@@ -706,10 +921,19 @@ public class EngagementRequestService {
         if (credit == null) {
             credit = saved.getSuggestedScore();
         }
-        if (credit != null && credit.compareTo(BigDecimal.ZERO) > 0 && saved.getAssignedExpert() != null) {
-            Expert ex = expertRepository.findById(saved.getAssignedExpert().getId()).orElse(null);
-            if (ex != null && ex.getOwner() != null) {
-                pointsService.creditFromEngagement(ex.getOwner().getId(), credit, saved.getId());
+        if (credit != null && credit.compareTo(BigDecimal.ZERO) > 0
+                && saved.getAssignedExperts() != null
+                && !saved.getAssignedExperts().isEmpty()) {
+            List<Expert> list = saved.getAssignedExperts().stream()
+                    .sorted(Comparator.comparing(Expert::getId))
+                    .toList();
+            List<BigDecimal> portions = splitCreditEvenly(credit, list.size());
+            for (int i = 0; i < list.size(); i++) {
+                Expert ex = list.get(i);
+                BigDecimal portion = portions.get(i);
+                if (portion.compareTo(BigDecimal.ZERO) > 0 && ex.getOwner() != null) {
+                    pointsService.creditFromEngagement(ex.getOwner().getId(), portion, saved.getId());
+                }
             }
         }
         return toResponse(saved);
