@@ -16,8 +16,8 @@ logs/
 
 # node / frontend
 node_modules/
-#dist/
-#expert-link-frontend/dist/
+dist/
+expert-link-frontend/dist/
 coverage/
 .pnpm-store/
 .npm/
