@@ -184,17 +184,17 @@
               :description="skillsFailed ? '技能数据加载失败' : '暂无技能数据'"
             />
             <el-table v-else :data="topSkills" style="width: 100%" height="300">
-              <el-table-column prop="rank" label="排名" width="60">
+              <el-table-column prop="rank" label="排名" width="60" align="center">
                 <template #default="{ row }">
                   <span class="rank-badge" :class="getRankClass(row.rank)">
                     {{ row.rank }}
                   </span>
                 </template>
               </el-table-column>
-              <el-table-column prop="name" label="技能名称" />
-              <el-table-column prop="expertCount" label="专家数量" width="100" />
-              <el-table-column prop="projectCount" label="项目数量" width="100" />
-              <el-table-column prop="demandLevel" label="需求等级" width="100">
+              <el-table-column prop="name" label="技能名称" align="center" />
+              <el-table-column prop="expertCount" label="专家数量" width="100" align="center" />
+              <el-table-column prop="projectCount" label="项目数量" width="100" align="center" />
+              <el-table-column prop="demandLevel" label="需求等级" width="100" align="center">
                 <template #default="{ row }">
                   <el-rate :model-value="row.demandLevel" disabled size="small" />
                 </template>
@@ -210,9 +210,9 @@
             </template>
             <el-empty v-if="recentMatches.length === 0" description="暂无项目-专家分配记录" />
             <el-table v-else :data="recentMatches" style="width: 100%" height="300">
-              <el-table-column prop="projectName" label="项目名称" />
-              <el-table-column prop="expertName" label="专家姓名" width="120" />
-              <el-table-column prop="scoreDisplay" label="匹配度" width="110">
+              <el-table-column prop="projectName" label="项目名称" align="center" />
+              <el-table-column prop="expertName" label="专家姓名" width="120" align="center" />
+              <el-table-column prop="scoreDisplay" label="匹配度" width="110" align="center">
                 <template #default="{ row }">
                   <el-tag v-if="row.scoreIsPercent" :type="scoreTagType(row.scoreDisplay)">
                     {{ row.scoreDisplay }}
@@ -220,8 +220,8 @@
                   <el-tag v-else type="info">{{ row.scoreDisplay }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="matchDate" label="匹配时间" width="120" />
-              <el-table-column prop="statusLabel" label="状态" width="100">
+              <el-table-column prop="matchDate" label="匹配时间" width="120" align="center" />
+              <el-table-column prop="statusLabel" label="状态" width="100" align="center">
                 <template #default="{ row }">
                   <el-tag :type="assignmentTagType(row.statusRaw)" size="small">
                     {{ row.statusLabel }}

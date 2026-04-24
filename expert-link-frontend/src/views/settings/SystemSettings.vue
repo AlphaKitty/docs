@@ -59,17 +59,17 @@
               </div>
             </template>
             <el-table :data="users" style="width: 100%">
-              <el-table-column prop="username" label="用户名" width="120" />
-              <el-table-column prop="name" label="姓名" width="120" />
-              <el-table-column prop="email" label="邮箱" />
-              <el-table-column prop="role" label="角色" width="120">
+              <el-table-column prop="username" label="用户名" width="120" align="center" />
+              <el-table-column prop="name" label="姓名" width="120" align="center" />
+              <el-table-column prop="email" label="邮箱" align="center" />
+              <el-table-column prop="role" label="角色" width="120" align="center">
                 <template #default="{ row }">
                   <el-tag :type="getRoleType(row.role)">
                     {{ getRoleText(row.role) }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="status" label="状态" width="100">
+              <el-table-column prop="status" label="状态" width="100" align="center">
                 <template #default="{ row }">
                   <el-switch
                     v-model="row.status"
@@ -79,7 +79,7 @@
                   />
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="200">
+              <el-table-column label="操作" width="200" align="center">
                 <template #default="{ row }">
                   <el-button type="primary" size="small" @click="editUser(row)">编辑</el-button>
                   <el-button type="danger" size="small" @click="deleteUser(row)">删除</el-button>
@@ -246,23 +246,23 @@
               <div class="backup-history">
                 <h4>备份历史</h4>
                 <el-table :data="backupHistory" style="width: 100%">
-                  <el-table-column prop="date" label="备份时间" width="180" />
-                  <el-table-column prop="size" label="文件大小" width="120" />
-                  <el-table-column prop="type" label="备份类型" width="120">
+                  <el-table-column prop="date" label="备份时间" width="180" align="center" />
+                  <el-table-column prop="size" label="文件大小" width="120" align="center" />
+                  <el-table-column prop="type" label="备份类型" width="120" align="center">
                     <template #default="{ row }">
                       <el-tag :type="row.type === 'full' ? 'primary' : 'success'">
                         {{ row.type === 'full' ? '完整备份' : '增量备份' }}
                       </el-tag>
                     </template>
                   </el-table-column>
-                  <el-table-column prop="status" label="状态" width="100">
+                  <el-table-column prop="status" label="状态" width="100" align="center">
                     <template #default="{ row }">
                       <el-tag :type="row.status === 'success' ? 'success' : 'danger'">
                         {{ row.status === 'success' ? '成功' : '失败' }}
                       </el-tag>
                     </template>
                   </el-table-column>
-                  <el-table-column label="操作" width="120">
+                  <el-table-column label="操作" width="120" align="center">
                     <template #default="{ row }">
                       <el-button type="text" @click="downloadBackup(row)">下载</el-button>
                       <el-button type="text" @click="deleteBackup(row)">删除</el-button>

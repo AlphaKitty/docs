@@ -4,22 +4,27 @@
       <h2>{{ title }}</h2>
       <el-button v-if="kind === 'mine'" type="primary" @click="$router.push('/engagements/new')">新建申请</el-button>
     </div>
-    <el-table :data="rows" style="width: 100%">
-      <el-table-column prop="referenceCode" label="申请编号" width="160">
+    <div class="table-container">
+      <el-table :data="rows" style="width: 100%" table-layout="fixed">
+        <el-table-column prop="referenceCode" label="申请编号" min-width="180" show-overflow-tooltip align="center">
         <template #default="{ row }">
           {{ row.referenceCode || '—' }}
         </template>
       </el-table-column>
-      <el-table-column prop="id" label="ID" width="72" />
-      <el-table-column prop="domainName" label="领域" width="140" />
-      <el-table-column prop="status" label="状态" width="160">
+        <el-table-column prop="id" label="ID" width="80" align="center" />
+        <el-table-column prop="domainName" label="领域" width="140" show-overflow-tooltip align="center" />
+        <el-table-column prop="status" label="状态" width="160" align="center">
         <template #default="{ row }">
           <el-tag size="small">{{ statusText(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="taskType" label="类型" width="140" />
-      <el-table-column prop="applicantUsername" v-if="kind !== 'mine'" label="申请人" width="120" />
-      <el-table-column label="指派专家" min-width="160" show-overflow-tooltip>
+        <el-table-column prop="taskType" label="类型" width="140" show-overflow-tooltip align="center">
+          <template #default="{ row }">
+            {{ taskTypeLabel(row.taskType) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="applicantUsername" v-if="kind !== 'mine'" label="申请人" width="120" show-overflow-tooltip align="center" />
+        <el-table-column label="指派专家" min-width="220" show-overflow-tooltip align="center">
         <template #default="{ row }">
           {{
             row.assignedExpertNames?.length
@@ -28,13 +33,18 @@
           }}
         </template>
       </el-table-column>
-      <el-table-column prop="updatedAt" label="更新" width="170" />
-      <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column prop="updatedAt" label="更新" width="180" align="center">
+          <template #default="{ row }">
+            {{ formatDateTimeDisplay(row.updatedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right" align="center">
         <template #default="{ row }">
           <el-button type="primary" link @click="$router.push(`/engagements/${row.id}`)">详情</el-button>
         </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+      </el-table>
+    </div>
     <el-empty v-if="!loading && rows.length === 0" :description="emptyText" />
   </div>
 </template>
@@ -45,6 +55,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { EngagementRequestService } from '@/api/services/engagement-request.service'
 import type { EngagementRequestRow } from '@/api/types/engagement'
+import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
 
 const route = useRoute()
 const kind = computed(() => (route.meta.engagementList as 'mine' | 'steward' | 'expert') || 'mine')
@@ -106,7 +117,7 @@ watch(
 
 <style scoped>
 .page {
-  padding: 16px;
+  padding: 20px;
 }
 .page-header {
   display: flex;
@@ -117,5 +128,11 @@ watch(
 .page-header h2 {
   margin: 0;
   font-size: 20px;
+}
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 </style>

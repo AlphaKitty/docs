@@ -10,25 +10,28 @@
     </div>
     
     <div class="search-bar">
-      <el-input
-        v-model="searchKeyword"
-        placeholder="搜索技能名称或描述"
-        clearable
-        style="width: 300px"
-        @input="handleSearch"
-      >
-        <template #prefix>
-          <el-icon><Search /></el-icon>
-        </template>
-      </el-input>
-      
-      <el-select v-model="filterCategory" placeholder="分类筛选" clearable @change="handleFilter">
-        <el-option label="技术开发" value="tech" />
-        <el-option label="设计创意" value="design" />
-        <el-option label="产品管理" value="product" />
-        <el-option label="市场营销" value="marketing" />
-        <el-option label="数据分析" value="data" />
-      </el-select>
+      <div class="search-controls">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索技能名称或描述"
+          clearable
+          @keyup.enter="handleSearch"
+          @input="handleSearch"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+
+        <el-select v-model="filterCategory" placeholder="分类筛选" clearable @change="handleFilter">
+          <el-option label="技术开发" value="tech" />
+          <el-option label="设计创意" value="design" />
+          <el-option label="产品管理" value="product" />
+          <el-option label="市场营销" value="marketing" />
+          <el-option label="数据分析" value="data" />
+        </el-select>
+      </div>
+      <el-button type="primary" @click="handleSearch">搜索</el-button>
     </div>
 
     <el-alert
@@ -107,10 +110,10 @@
     </div> -->
     
     <div class="skill-table">
-      <el-table :data="paginatedSkills" style="width: 100%">
-        <el-table-column prop="name" label="技能名称" width="150" align="center" />
+      <el-table :data="paginatedSkills" style="width: 100%" table-layout="fixed">
+        <el-table-column prop="name" label="技能名称" min-width="160" align="center" show-overflow-tooltip />
         
-        <el-table-column prop="category" label="分类" width="80" align="center">
+        <el-table-column prop="category" label="分类" width="110" align="center">
           <template #default="{ row }">
             <el-tag :type="getCategoryType(row.category)" size="small" align="center">
               {{ getCategoryText(row.category) }}
@@ -118,9 +121,9 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="description" label="描述" align="center" />
+        <el-table-column prop="description" label="描述" min-width="220" align="center" show-overflow-tooltip />
 
-        <el-table-column label="标签" min-width="80" align="center">
+        <el-table-column label="标签" min-width="150" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="vertical-tag-list" style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
               <el-tag
@@ -144,19 +147,19 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="expertCount" label="专家数量" width="100" align="center">
+        <el-table-column prop="expertCount" label="专家数量" width="110" align="center">
           <template #default="{ row }">
             <span class="count-badge">{{ row.expertCount }}</span>
           </template>
         </el-table-column>
         
-        <el-table-column prop="projectCount" label="项目数量" width="100" align="center">
+        <el-table-column prop="projectCount" label="项目数量" width="110" align="center">
           <template #default="{ row }">
             <span class="count-badge">{{ row.projectCount }}</span>
           </template>
         </el-table-column>
         
-        <el-table-column prop="demandLevel" label="需求等级" width="100" align="center">
+        <el-table-column prop="demandLevel" label="需求等级" width="160" align="center">
           <template #default="{ row }">
             <el-rate v-model="row.demandLevel" disabled show-score text-color="#ff9900" />
           </template>
@@ -181,7 +184,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column label="操作" min-width="80" fixed="right" align="center">
+        <el-table-column label="操作" width="140" fixed="right" align="center">
           <template #default="{ row }">
             <!-- <div class="table-actions" style="display: flex; flex-direction: column; gap: 4px;"> -->
             <div class="table-actions">
@@ -535,8 +538,26 @@ onMounted(() => {
 
 .search-bar {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+}
+
+.search-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-controls :deep(.el-input) {
+  width: 320px;
+}
+
+.search-controls :deep(.el-select) {
+  width: 220px;
 }
 
 .page-alert {
