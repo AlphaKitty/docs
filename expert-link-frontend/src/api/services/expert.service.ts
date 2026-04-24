@@ -258,4 +258,20 @@ export class ExpertService {
       throw handleApiError(error, '获取领域专家失败');
     }
   }
+
+  /** 多个领域（自动包含子领域）下的专家并集 */
+  static async getExpertsByDomains(domainIds: number[]): Promise<ExpertDetail[]> {
+    try {
+      const deduped = Array.from(new Set((domainIds || []).filter((id) => Number.isFinite(id) && id > 0)))
+      if (!deduped.length) {
+        return []
+      }
+      const response = await apiClient.get<ApiResponse<ExpertDetail[]>>('/experts/by-domains', {
+        params: { domainIds: deduped },
+      })
+      return response.data
+    } catch (error) {
+      throw handleApiError(error, '获取领域专家失败')
+    }
+  }
 }

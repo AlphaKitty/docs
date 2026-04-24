@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -179,6 +180,21 @@ public class ExpertController {
     }
 
     /**
+     * 根据多个领域（含各自子领域）查找专家
+     * GET /api/experts/by-domains?domainIds=1&domainIds=2
+     */
+    @GetMapping("/by-domains")
+    public ResponseEntity<ApiResponse<List<Expert>>> getExpertsByDomains(
+            @RequestParam Set<Long> domainIds,
+            Authentication authentication) {
+        Set<Long> deduped = domainIds == null ? Set.of() : new LinkedHashSet<>(domainIds);
+        List<Expert> experts = expertService.findByDomainIds(deduped).stream()
+                .map(e -> expertPrivacyService.maskForRead(e, authentication))
+                .toList();
+        return ApiResponses.ok(experts);
+    }
+
+    /**
      * 根据技能查找专家
      * GET /api/experts/skill/{skillId}
      */
@@ -326,6 +342,15 @@ public class ExpertController {
         byte[] data = expertService.buildImportTemplate();
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=experts-template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportExperts() {
+        byte[] data = expertService.buildExportWorkbook();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=experts-export.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(data);
     }

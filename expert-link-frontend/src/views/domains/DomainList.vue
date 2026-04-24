@@ -8,6 +8,7 @@
         </div>
         <div class="header-actions">
           <el-button @click="downloadTemplate">下载导入模板</el-button>
+          <el-button @click="exportData">导出领域数据</el-button>
           <el-button type="primary" @click="triggerImport">批量导入领域</el-button>
           <el-button type="primary" plain @click="goCreate">新建领域</el-button>
           <input
@@ -89,7 +90,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { DomainService } from '@/api/services/domain.service'
 import { ExpertService } from '@/api/services/expert.service'
 import type { UserPickerItem } from '@/api/types'
@@ -238,8 +239,27 @@ const downloadTemplate = async () => {
   }
 }
 
+const exportData = async () => {
+  try {
+    const blob = await DomainService.exportDomains()
+    saveBlob(blob, '领域导出.xlsx')
+  } catch (error: unknown) {
+    ElMessage.error((error as Error)?.message || '导出失败')
+  }
+}
+
 const triggerImport = () => {
   importInputRef.value?.click()
+}
+
+const showImportErrors = async (errors: Array<{ row: number; message: string }>) => {
+  if (!errors?.length) return
+  const lines = errors.map((item, index) => `${index + 1}. 第 ${item.row} 行：${item.message}`)
+  await ElMessageBox.alert(lines.join('<br/>'), '导入失败明细', {
+    dangerouslyUseHTMLString: true,
+    confirmButtonText: '我知道了',
+    type: 'warning',
+  })
 }
 
 const onImportFileChange = async (event: Event) => {
@@ -249,6 +269,7 @@ const onImportFileChange = async (event: Event) => {
   try {
     const result = await DomainService.importDomains(file)
     ElMessage.success(`导入完成：总计${result.data.total}，成功${result.data.success}，跳过${result.data.skipped}，失败${result.data.failed}`)
+    await showImportErrors(result.data.errors || [])
     await fetchRows()
   } catch (error: unknown) {
     ElMessage.error((error as Error)?.message || '导入失败')

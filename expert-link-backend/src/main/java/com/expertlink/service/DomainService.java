@@ -14,8 +14,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +44,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DomainService {
+    private static final String[] DOMAIN_IMPORT_HEADERS_ZH = {"领域名称", "父领域名称", "层级", "启用状态", "描述"};
+    private static final String[] DOMAIN_ACTIVE_OPTIONS_ZH = {"启用", "停用"};
 
     private final DomainRepository domainRepository;
     private final ExpertRepository expertRepository;
@@ -123,6 +129,28 @@ public class DomainService {
         }
     }
 
+    public Set<Long> collectSubtreeDomainIds(Set<Long> rootDomainIds) {
+        Set<Long> roots = rootDomainIds == null ? Set.of() : rootDomainIds.stream()
+                .filter(id -> id != null && id > 0)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (roots.isEmpty()) {
+            return Set.of();
+        }
+        List<Domain> all = domainRepository.findAll();
+        Map<Long, List<Long>> childrenMap = new LinkedHashMap<>();
+        for (Domain d : all) {
+            if (d.getParentId() == null) {
+                continue;
+            }
+            childrenMap.computeIfAbsent(d.getParentId(), k -> new ArrayList<>()).add(d.getId());
+        }
+        Set<Long> out = new LinkedHashSet<>();
+        for (Long rootId : roots) {
+            collectSubtreeIds(rootId, childrenMap, out);
+        }
+        return out;
+    }
+
     /**
      * 根据名称查找领域
      */
@@ -135,15 +163,52 @@ public class DomainService {
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("domains");
             Row header = sheet.createRow(0);
-            String[] columns = {"name", "parentName", "level", "isActive", "description"};
-            for (int i = 0; i < columns.length; i++) {
-                header.createCell(i).setCellValue(columns[i]);
+            for (int i = 0; i < DOMAIN_IMPORT_HEADERS_ZH.length; i++) {
+                header.createCell(i).setCellValue(DOMAIN_IMPORT_HEADERS_ZH[i]);
                 sheet.setColumnWidth(i, 22 * 256);
             }
+            Row sample = sheet.createRow(1);
+            sample.createCell(0).setCellValue("智能制造");
+            sample.createCell(1).setCellValue("");
+            sample.createCell(2).setCellValue("1");
+            sample.createCell(3).setCellValue("启用");
+            sample.createCell(4).setCellValue("制造业数字化相关领域");
+            // 枚举字段下拉：启用状态
+            addExplicitDropdown(sheet, 1, 5000, 3, DOMAIN_ACTIVE_OPTIONS_ZH);
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException("生成领域导入模板失败", e);
+        }
+    }
+
+    public byte[] buildExportWorkbook() {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("domains");
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < DOMAIN_IMPORT_HEADERS_ZH.length; i++) {
+                header.createCell(i).setCellValue(DOMAIN_IMPORT_HEADERS_ZH[i]);
+                sheet.setColumnWidth(i, 22 * 256);
+            }
+            List<Domain> domains = domainRepository.findAll();
+            int rowIdx = 1;
+            for (Domain domain : domains) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(defaultString(domain.getName()));
+                String parentName = "";
+                if (domain.getParentId() != null) {
+                    parentName = domainRepository.findById(domain.getParentId()).map(Domain::getName).orElse("");
+                }
+                row.createCell(1).setCellValue(parentName);
+                row.createCell(2).setCellValue(domain.getLevel() == null ? "" : String.valueOf(domain.getLevel()));
+                row.createCell(3).setCellValue(Boolean.TRUE.equals(domain.getIsActive()) ? "启用" : "停用");
+                row.createCell(4).setCellValue(defaultString(domain.getDescription()));
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("导出领域失败", e);
         }
     }
 
@@ -191,7 +256,7 @@ public class DomainService {
                     }
 
                     String activeText = readString(row.getCell(3));
-                    domain.setIsActive(!"false".equalsIgnoreCase(activeText));
+                    domain.setIsActive(parseActive(activeText));
                     domain.setDescription(readString(row.getCell(4)));
                     domain.setDisplayOrder(0);
                     domain.setExpertCount(0);
@@ -240,6 +305,35 @@ public class DomainService {
             if (StringUtils.hasText(readString(row.getCell(i)))) return false;
         }
         return true;
+    }
+
+    private static String defaultString(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static Boolean parseActive(String text) {
+        if (!StringUtils.hasText(text)) {
+            return true;
+        }
+        String t = text.trim();
+        if ("启用".equals(t) || "true".equalsIgnoreCase(t)) {
+            return true;
+        }
+        if ("停用".equals(t) || "false".equalsIgnoreCase(t)) {
+            return false;
+        }
+        throw new IllegalArgumentException("启用状态仅支持：启用/停用");
+    }
+
+    private static void addExplicitDropdown(Sheet sheet, int firstRow, int lastRow, int col, String[] values) {
+        DataValidationHelper helper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = helper.createExplicitListConstraint(values);
+        CellRangeAddressList regions = new CellRangeAddressList(firstRow, lastRow, col, col);
+        DataValidation validation = helper.createValidation(constraint, regions);
+        validation.setErrorStyle(DataValidation.ErrorStyle.STOP);
+        validation.setShowErrorBox(true);
+        validation.createErrorBox("输入不合法", "请从下拉选项中选择");
+        sheet.addValidationData(validation);
     }
 
     /**

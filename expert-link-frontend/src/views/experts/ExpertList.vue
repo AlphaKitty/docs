@@ -4,6 +4,7 @@
       <h2>专家管理</h2>
       <div class="header-actions">
         <el-button :icon="Download" @click="downloadTemplate">下载导入模板</el-button>
+        <el-button :icon="Download" @click="exportData">导出专家数据</el-button>
         <el-button type="primary" @click="triggerImport">批量导入专家</el-button>
         <input
           ref="importInputRef"
@@ -246,8 +247,27 @@ const downloadTemplate = async () => {
   }
 }
 
+const exportData = async () => {
+  try {
+    const blob = await ExpertService.exportExperts()
+    saveBlob(blob, '专家导出.xlsx')
+  } catch (error: any) {
+    ElMessage.error(error?.message || '导出失败')
+  }
+}
+
 const triggerImport = () => {
   importInputRef.value?.click()
+}
+
+const showImportErrors = async (errors: Array<{ row: number; message: string }>) => {
+  if (!errors?.length) return
+  const lines = errors.map((item, index) => `${index + 1}. 第 ${item.row} 行：${item.message}`)
+  await ElMessageBox.alert(lines.join('<br/>'), '导入失败明细', {
+    dangerouslyUseHTMLString: true,
+    confirmButtonText: '我知道了',
+    type: 'warning',
+  })
 }
 
 const onImportFileChange = async (event: Event) => {
@@ -257,6 +277,7 @@ const onImportFileChange = async (event: Event) => {
   try {
     const result = await ExpertService.importExperts(file)
     ElMessage.success(`导入完成：总计${result.data.total}，成功${result.data.success}，跳过${result.data.skipped}，失败${result.data.failed}`)
+    await showImportErrors(result.data.errors || [])
     await expertStore.fetchExperts()
   } catch (error: any) {
     ElMessage.error(error?.message || '导入失败')
