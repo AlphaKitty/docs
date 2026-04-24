@@ -1,0 +1,1 @@
+const e=r=>{if(!r)return"—";if(r.includes("T")){const t=r.replace("T"," ").replace("Z","");return t.length>=19?t.slice(0,19):t}return r},n=r=>r?{PROBLEM_SOLVING:"问题解决",REVIEW:"评审",KNOWLEDGE_MANAGEMENT:"知识管理"}[r]||r:"—";export{e as f,n as t};
