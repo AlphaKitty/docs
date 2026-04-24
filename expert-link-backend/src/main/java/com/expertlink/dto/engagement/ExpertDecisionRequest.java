@@ -10,4 +10,7 @@ public class ExpertDecisionRequest {
     private Boolean accepted;
 
     private String note;
+
+    /** 超级管理员代为某被指派的专家确认时必传 */
+    private Long expertId;
 }

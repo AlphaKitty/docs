@@ -19,7 +19,15 @@
       </el-table-column>
       <el-table-column prop="taskType" label="类型" width="140" />
       <el-table-column prop="applicantUsername" v-if="kind !== 'mine'" label="申请人" width="120" />
-      <el-table-column prop="assignedExpertName" label="指派专家" width="120" />
+      <el-table-column label="指派专家" min-width="160" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{
+            row.assignedExpertNames?.length
+              ? row.assignedExpertNames.join('、')
+              : row.assignedExpertName || '—'
+          }}
+        </template>
+      </el-table-column>
       <el-table-column prop="updatedAt" label="更新" width="170" />
       <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">

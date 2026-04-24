@@ -86,11 +86,15 @@ export class EngagementRequestService {
     }
   }
 
-  static async assign(id: number, expertId: number, assignmentNote?: string): Promise<EngagementRequestRow> {
+  static async assign(
+    id: number,
+    expertIds: number[],
+    assignmentNote?: string
+  ): Promise<EngagementRequestRow> {
     try {
       const response = await apiClient.post<ApiResponse<EngagementRequestRow>>(
         `/engagement-requests/${id}/assign`,
-        { expertId, assignmentNote }
+        { expertIds, assignmentNote }
       )
       return unwrap(response)
     } catch (e) {
@@ -146,15 +150,11 @@ export class EngagementRequestService {
     }
   }
 
-  static async reassign(
-    id: number,
-    expertId: number,
-    reason?: string
-  ): Promise<EngagementRequestRow> {
+  static async reassign(id: number, expertIds: number[], reason?: string): Promise<EngagementRequestRow> {
     try {
       const response = await apiClient.post<ApiResponse<EngagementRequestRow>>(
         `/engagement-requests/${id}/reassign`,
-        { expertId, reason }
+        { expertIds, reason }
       )
       return unwrap(response)
     } catch (e) {

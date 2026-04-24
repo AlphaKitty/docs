@@ -42,6 +42,10 @@ export interface EngagementRequestRow {
   designatedExpertNames?: string[] | null
   designatedExpertId?: number | null
   designatedExpertName?: string | null
+  assignedExpertIds?: number[] | null
+  assignedExpertNames?: string[] | null
+  viewerExpertConfirmPending?: boolean | null
+  viewerAmongAssignedExperts?: boolean | null
   assignedExpertId?: number | null
   assignedExpertName?: string | null
   assignedByStewardId?: number | null

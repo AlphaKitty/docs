@@ -51,7 +51,13 @@
               : (row.designatedExpertName || '—')
           }}
         </el-descriptions-item>
-        <el-descriptions-item label="指派专家">{{ row.assignedExpertName || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="指派专家">
+          {{
+            row.assignedExpertNames?.length
+              ? row.assignedExpertNames.join('、')
+              : row.assignedExpertName || '—'
+          }}
+        </el-descriptions-item>
         <el-descriptions-item label="指派说明" :span="2">{{ row.assignmentNote || '—' }}</el-descriptions-item>
         <el-descriptions-item v-if="row.suggestedScore != null" label="系统建议分">
           {{ row.suggestedScore }}（评价维度预计算，供放分参考）
@@ -98,14 +104,29 @@
         </div>
       </el-card>
 
+      <el-alert
+        v-if="
+          row.status === 'PENDING_EXPERT_CONFIRM' &&
+          row.viewerAmongAssignedExperts &&
+          row.viewerExpertConfirmPending === false
+        "
+        type="info"
+        :closable="false"
+        class="mb"
+        title="您已确认，待其他被指派的专家确认后方可进入执行中"
+      />
+
       <el-card v-if="canStewardAssign" class="mt" shadow="never">
         <template #header>行管指派专家</template>
-        <p class="hint">须为已关联本领域的专家（后端校验）。</p>
+        <p class="hint">须为已关联本领域的专家（后端校验）；可多选，所选专家均需确认接受后进入执行中。</p>
         <el-select
-          v-model="assignExpertId"
+          v-model="assignExpertIds"
+          multiple
           filterable
+          collapse-tags
+          collapse-tags-tooltip
           clearable
-          placeholder="从本领域专家中选择"
+          placeholder="从本领域专家中选择（可多选）"
           style="width: 100%"
         >
           <el-option
@@ -121,12 +142,15 @@
 
       <el-card v-if="canStewardReassign" class="mt" shadow="never">
         <template #header>改派专家</template>
-        <p class="hint">待确认或执行中可改派；改派后新专家需重新确认。</p>
+        <p class="hint">待确认或执行中可改派；改派后新名单需重新确认（可多选）。</p>
         <el-select
-          v-model="reassignExpertId"
+          v-model="reassignExpertIds"
+          multiple
           filterable
+          collapse-tags
+          collapse-tags-tooltip
           clearable
-          placeholder="选择新专家"
+          placeholder="选择专家（可多选）"
           style="width: 100%"
         >
           <el-option
@@ -224,13 +248,13 @@ const loading = ref(false)
 const acting = ref(false)
 const row = ref<EngagementRequestRow | null>(null)
 const draftDesc = ref('')
-const assignExpertId = ref<number | undefined>()
+const assignExpertIds = ref<number[]>([])
 const assignNote = ref('')
 const domainExpertOptions = ref<ExpertDetail[]>([])
 const expertNote = ref('')
 const finalScore = ref<number | undefined>()
 const releaseNote = ref('')
-const reassignExpertId = ref<number | undefined>()
+const reassignExpertIds = ref<number[]>([])
 const reassignReason = ref('')
 const revisionReason = ref('')
 const evalAttachmentPaths = ref<string[]>([])
@@ -267,7 +291,8 @@ const canStewardRelease = computed(() => {
 
 const canExpertConfirm = computed(() => {
   if (!row.value || row.value.status !== 'PENDING_EXPERT_CONFIRM') return false
-  return canExpertRole.value
+  if (!canExpertRole.value) return false
+  return row.value.viewerExpertConfirmPending === true
 })
 
 const canRequestRevision = computed(() => canStewardRelease.value)
@@ -315,8 +340,9 @@ async function load() {
       finalScore.value = undefined
     }
     revisionReason.value = ''
-    reassignExpertId.value = undefined
+    reassignExpertIds.value = r.assignedExpertIds?.length ? [...r.assignedExpertIds] : []
     reassignReason.value = ''
+    assignExpertIds.value = []
   } catch {
     ElMessage.error('加载失败')
     row.value = null
@@ -385,13 +411,13 @@ async function submitReq() {
 }
 
 async function doAssign() {
-  if (!row.value || !assignExpertId.value) {
-    ElMessage.warning('请选择专家')
+  if (!row.value || !assignExpertIds.value.length) {
+    ElMessage.warning('请至少选择一名专家')
     return
   }
   acting.value = true
   try {
-    const r = await EngagementRequestService.assign(row.value.id, assignExpertId.value, assignNote.value)
+    const r = await EngagementRequestService.assign(row.value.id, assignExpertIds.value, assignNote.value)
     row.value = r
     ElMessage.success('已指派')
   } catch (e: unknown) {
@@ -402,13 +428,13 @@ async function doAssign() {
 }
 
 async function doReassign() {
-  if (!row.value || !reassignExpertId.value) {
-    ElMessage.warning('请选择新专家')
+  if (!row.value || !reassignExpertIds.value.length) {
+    ElMessage.warning('请至少选择一名专家')
     return
   }
   acting.value = true
   try {
-    const r = await EngagementRequestService.reassign(row.value.id, reassignExpertId.value, reassignReason.value)
+    const r = await EngagementRequestService.reassign(row.value.id, reassignExpertIds.value, reassignReason.value)
     row.value = r
     ElMessage.success('已改派')
   } catch (e: unknown) {

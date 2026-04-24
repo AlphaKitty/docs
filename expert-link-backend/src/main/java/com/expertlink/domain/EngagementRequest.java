@@ -59,10 +59,22 @@ public class EngagementRequest extends BaseEntity {
     @Builder.Default
     private Set<Expert> designatedExperts = new LinkedHashSet<>();
 
-    /** 行管指派后的专家 */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_expert_id")
-    private Expert assignedExpert;
+    /** 行管指派后的专家（可多选） */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "engagement_request_assigned_experts",
+            joinColumns = @JoinColumn(name = "engagement_request_id"),
+            inverseJoinColumns = @JoinColumn(name = "expert_id")
+    )
+    @Builder.Default
+    private Set<Expert> assignedExperts = new LinkedHashSet<>();
+
+    /**
+     * 各指派专家的确认状态 JSON 数组，元素形如
+     * {"expertId":1,"accepted":true,"note":"ok","at":"2026-01-01T12:00:00"}
+     */
+    @Column(name = "assignment_expert_decisions", columnDefinition = "TEXT")
+    private String assignmentExpertDecisions;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_by_steward_id")
