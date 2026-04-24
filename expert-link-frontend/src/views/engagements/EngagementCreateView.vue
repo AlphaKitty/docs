@@ -8,14 +8,45 @@
         :closable="false"
         title="仅可申请已配置领域行管的领域。"
       />
-      <el-form-item label="领域" required>
-        <el-select v-model="form.domainId" placeholder="选择领域" filterable style="width: 100%">
+      <el-form-item label="父领域" required>
+        <el-select
+          v-model="selectedParentIds"
+          multiple
+          filterable
+          collapse-tags
+          clearable
+          placeholder="选择父领域（可多选）"
+          style="width: 100%"
+        >
           <el-option
-            v-for="d in domains"
+            v-for="d in parentDomains"
             :key="d.id"
-            :label="d.hasSteward ? d.name : `${d.name}（未配置行管）`"
+            :label="domainLabel(d)"
             :value="d.id"
             :disabled="!d.hasSteward"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item
+        v-for="pid in selectedParentIds"
+        :key="pid"
+        :label="`${domainNameById.get(pid) || pid} / 子领域`"
+      >
+        <el-select
+          v-model="selectedSubdomainIdsByParent[pid]"
+          multiple
+          filterable
+          collapse-tags
+          clearable
+          placeholder="不选则使用父领域（自动覆盖其全部子领域专家）"
+          style="width: 100%"
+        >
+          <el-option
+            v-for="child in childrenByParent.get(pid) || []"
+            :key="child.id"
+            :label="domainLabel(child)"
+            :value="child.id"
+            :disabled="!child.hasSteward"
           />
         </el-select>
       </el-form-item>
@@ -80,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DomainService } from '@/api/services/domain.service'
@@ -89,16 +120,17 @@ import { ExpertService } from '@/api/services/expert.service'
 import type { EngagementMode, EngagementTaskType } from '@/api/types/engagement'
 import type { ExpertDetail } from '@/api/types/expert'
 
-type DomainOption = { id: number; name: string; hasSteward: boolean }
+type DomainOption = { id: number; name: string; parentId?: number; hasSteward: boolean }
 
 const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
-const domains = ref<DomainOption[]>([])
+const allDomains = ref<DomainOption[]>([])
 const domainExpertOptions = ref<ExpertDetail[]>([])
+const selectedParentIds = ref<number[]>([])
+const selectedSubdomainIdsByParent = reactive<Record<number, number[]>>({})
 
 const form = reactive({
-  domainId: undefined as number | undefined,
   mode: 'STEWARD_ASSIGN' as EngagementMode,
   taskType: 'PROBLEM_SOLVING' as EngagementTaskType,
   startAt: '',
@@ -107,20 +139,58 @@ const form = reactive({
   designatedExpertIds: [] as number[],
 })
 
+const parentDomains = computed(() => allDomains.value.filter((d) => d.parentId == null))
+
+const domainNameById = computed(() => {
+  const map = new Map<number, string>()
+  for (const d of allDomains.value) {
+    map.set(d.id, d.name)
+  }
+  return map
+})
+
+const childrenByParent = computed(() => {
+  const map = new Map<number, DomainOption[]>()
+  for (const d of allDomains.value) {
+    if (d.parentId == null) continue
+    const arr = map.get(d.parentId) || []
+    arr.push(d)
+    map.set(d.parentId, arr)
+  }
+  return map
+})
+
+const effectiveDomainIds = computed(() => {
+  const ids: number[] = []
+  for (const pid of selectedParentIds.value) {
+    const selectedChildren = (selectedSubdomainIdsByParent[pid] || []).filter((id) => id > 0)
+    if (selectedChildren.length) {
+      ids.push(...selectedChildren)
+    } else {
+      ids.push(pid)
+    }
+  }
+  return Array.from(new Set(ids))
+})
+
+function domainLabel(d: DomainOption): string {
+  return d.hasSteward ? d.name : `${d.name}（未配置行管）`
+}
+
 onMounted(async () => {
   loading.value = true
   try {
     const res = await DomainService.getDomains({ page: 0, size: 200 })
-    domains.value = (res.content || []).map((d: any) => ({
+    allDomains.value = (res.content || []).map((d: any) => ({
       id: d.id,
       name: d.name,
+      parentId: d.parentId,
       hasSteward: Array.isArray(d.stewards) && d.stewards.length > 0,
     }))
-    const firstEnabled = domains.value.find((d) => d.hasSteward)
-    if (firstEnabled && form.domainId == null) {
-      form.domainId = firstEnabled.id
-    } else if (!firstEnabled) {
-      form.domainId = undefined
+    const firstEnabledParent = parentDomains.value.find((d) => d.hasSteward)
+    if (firstEnabledParent) {
+      selectedParentIds.value = [firstEnabledParent.id]
+    } else {
       ElMessage.warning('当前没有已配置行管的领域，暂不可新建申请')
     }
   } catch {
@@ -132,43 +202,86 @@ onMounted(async () => {
 })
 
 async function loadDomainExperts() {
-  if (!form.domainId) {
+  if (!effectiveDomainIds.value.length) {
     domainExpertOptions.value = []
     return
   }
   try {
-    domainExpertOptions.value = await ExpertService.getExpertsByDomain(form.domainId)
+    domainExpertOptions.value = await ExpertService.getExpertsByDomains(effectiveDomainIds.value)
   } catch {
     domainExpertOptions.value = []
   }
 }
 
 watch(
-  () => form.domainId,
-  async () => {
+  () => [...selectedParentIds.value],
+  (ids) => {
+    const keep = new Set(ids)
+    for (const key of Object.keys(selectedSubdomainIdsByParent)) {
+      const pid = Number(key)
+      if (!keep.has(pid)) {
+        delete selectedSubdomainIdsByParent[pid]
+      }
+    }
+    for (const pid of ids) {
+      if (!Array.isArray(selectedSubdomainIdsByParent[pid])) {
+        selectedSubdomainIdsByParent[pid] = []
+      }
+    }
     form.designatedExpertIds = []
-    await loadDomainExperts()
+    void loadDomainExperts()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => effectiveDomainIds.value.join(','),
+  () => {
+    form.designatedExpertIds = []
+    void loadDomainExperts()
   }
 )
 
 async function onSave() {
-  if (!form.domainId || !form.startAt) {
+  if (!effectiveDomainIds.value.length || !form.startAt) {
     ElMessage.warning('请填写领域与开始时间')
     return
   }
   saving.value = true
   try {
-    const created = await EngagementRequestService.createDraft({
-      domainId: form.domainId,
-      mode: form.mode,
-      taskType: form.taskType,
-      startAt: form.startAt,
-      endAt: form.endAt || undefined,
-      taskDescription: form.taskDescription || undefined,
-      ...(form.designatedExpertIds.length > 0 ? { designatedExpertIds: form.designatedExpertIds } : {}),
-    })
-    ElMessage.success('草稿已创建')
-    await router.push(`/engagements/${created.id}`)
+    const ok: number[] = []
+    const failed: number[] = []
+    for (const domainId of effectiveDomainIds.value) {
+      try {
+        const created = await EngagementRequestService.createDraft({
+          domainId,
+          mode: form.mode,
+          taskType: form.taskType,
+          startAt: form.startAt,
+          endAt: form.endAt || undefined,
+          taskDescription: form.taskDescription || undefined,
+          ...(form.designatedExpertIds.length > 0 ? { designatedExpertIds: form.designatedExpertIds } : {}),
+        })
+        ok.push(created.id)
+      } catch {
+        failed.push(domainId)
+      }
+    }
+    if (!ok.length) {
+      ElMessage.error('草稿创建失败')
+      return
+    }
+    if (ok.length === 1 && failed.length === 0) {
+      ElMessage.success('草稿已创建')
+      await router.push(`/engagements/${ok[0]}`)
+      return
+    }
+    if (!failed.length) {
+      ElMessage.success(`已创建 ${ok.length} 个草稿`)
+    } else {
+      ElMessage.warning(`已创建 ${ok.length} 个草稿，${failed.length} 个领域创建失败`)
+    }
+    await router.push('/engagements/mine')
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '保存失败')
   } finally {

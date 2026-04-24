@@ -311,6 +311,15 @@ public class DomainController {
                 .body(data);
     }
 
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportDomains() {
+        byte[] data = domainService.buildExportWorkbook();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=domains-export.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
     @PostMapping("/import")
     public ResponseEntity<ApiResponse<ImportResultResponse>> importDomains(@RequestParam("file") MultipartFile file) {
         return ApiResponses.ok(domainService.importDomains(file));

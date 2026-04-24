@@ -34,6 +34,17 @@ class DomainControllerTest {
     }
 
     @Test
+    void exportDomainsReturnsExcelBytes() {
+        byte[] bytes = new byte[]{3, 2, 1};
+        when(domainService.buildExportWorkbook()).thenReturn(bytes);
+
+        ResponseEntity<byte[]> response = controller.exportDomains();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertArrayEquals(bytes, response.getBody());
+    }
+
+    @Test
     void importDomainsWrapsResultInApiResponse() {
         var file = new MockMultipartFile("file", "domains.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1});

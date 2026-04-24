@@ -24,8 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.ByteArrayOutputStream;
@@ -46,10 +50,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ExpertService {
+    private static final String[] EXPERT_IMPORT_HEADERS_ZH = {
+            "姓名", "邮箱", "手机号", "微信号", "公司", "职位", "简介",
+            "经验年限", "小时费率", "可用状态", "主领域", "关联领域", "技能"
+    };
+    private static final String[] AVAILABILITY_OPTIONS_ZH = {"可用", "不可用"};
 
     private final ExpertRepository expertRepository;
     private final UserRepository userRepository;
     private final DomainRepository domainRepository;
+    private final DomainService domainService;
     private final SkillRepository skillRepository;
     private final ExpertDesignationRepository expertDesignationRepository;
 
@@ -174,19 +184,70 @@ public class ExpertService {
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("experts");
             Row header = sheet.createRow(0);
-            String[] columns = {
-                    "name", "email", "phone", "wechat", "company", "position", "introduction",
-                    "experienceYears", "hourlyRate", "availability", "primaryDomainName",
-                    "domainNames", "skillNames"
-            };
-            for (int i = 0; i < columns.length; i++) {
-                header.createCell(i).setCellValue(columns[i]);
+            for (int i = 0; i < EXPERT_IMPORT_HEADERS_ZH.length; i++) {
+                header.createCell(i).setCellValue(EXPERT_IMPORT_HEADERS_ZH[i]);
                 sheet.setColumnWidth(i, 20 * 256);
             }
+            Row sample = sheet.createRow(1);
+            sample.createCell(0).setCellValue("张三");
+            sample.createCell(1).setCellValue("zhangsan@example.com");
+            sample.createCell(2).setCellValue("13800000000");
+            sample.createCell(3).setCellValue("zhangsan_wechat");
+            sample.createCell(4).setCellValue("歌尔股份");
+            sample.createCell(5).setCellValue("高级算法工程师");
+            sample.createCell(6).setCellValue("10年工业视觉算法经验");
+            sample.createCell(7).setCellValue("10");
+            sample.createCell(8).setCellValue("500");
+            sample.createCell(9).setCellValue("可用");
+            sample.createCell(10).setCellValue("智能制造");
+            sample.createCell(11).setCellValue("智能制造,工业视觉");
+            sample.createCell(12).setCellValue("机器学习,深度学习");
+            // 枚举字段下拉：可用状态
+            addExplicitDropdown(sheet, 1, 5000, 9, AVAILABILITY_OPTIONS_ZH);
             workbook.write(out);
             return out.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException("生成专家导入模板失败", e);
+        }
+    }
+
+    public byte[] buildExportWorkbook() {
+        try (XSSFWorkbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("experts");
+            Row header = sheet.createRow(0);
+            for (int i = 0; i < EXPERT_IMPORT_HEADERS_ZH.length; i++) {
+                header.createCell(i).setCellValue(EXPERT_IMPORT_HEADERS_ZH[i]);
+                sheet.setColumnWidth(i, 20 * 256);
+            }
+            List<Expert> experts = expertRepository.findAll();
+            int rowIdx = 1;
+            for (Expert expert : experts) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(defaultString(expert.getName()));
+                row.createCell(1).setCellValue(defaultString(expert.getEmail()));
+                row.createCell(2).setCellValue(defaultString(expert.getPhoneNumber()));
+                row.createCell(3).setCellValue(defaultString(expert.getWechatId()));
+                row.createCell(4).setCellValue(defaultString(expert.getCurrentCompany()));
+                row.createCell(5).setCellValue(defaultString(expert.getCurrentPosition()));
+                row.createCell(6).setCellValue(defaultString(expert.getBiography()));
+                row.createCell(7).setCellValue(expert.getYearsOfExperience() == null ? "" : String.valueOf(expert.getYearsOfExperience()));
+                row.createCell(8).setCellValue(expert.getHourlyRate() == null ? "" : expert.getHourlyRate().stripTrailingZeros().toPlainString());
+                row.createCell(9).setCellValue(toAvailabilityZh(expert.getAvailabilityStatus()));
+                row.createCell(10).setCellValue(expert.getPrimaryDomain() == null ? "" : defaultString(expert.getPrimaryDomain().getName()));
+                row.createCell(11).setCellValue(expert.getDomains() == null ? "" : expert.getDomains().stream()
+                        .map(Domain::getName)
+                        .sorted()
+                        .collect(Collectors.joining(",")));
+                row.createCell(12).setCellValue(expert.getSkills() == null ? "" : expert.getSkills().stream()
+                        .map(Skill::getName)
+                        .sorted()
+                        .collect(Collectors.joining(",")));
+            }
+            workbook.write(out);
+            return out.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("导出专家失败", e);
         }
     }
 
@@ -239,8 +300,7 @@ public class ExpertService {
                         expert.setHourlyRate(hourlyRate);
                     }
                     String availability = readString(row.getCell(9));
-                    expert.setAvailabilityStatus(
-                            "UNAVAILABLE".equalsIgnoreCase(availability) ? "UNAVAILABLE" : "AVAILABLE");
+                    expert.setAvailabilityStatus(parseAvailability(availability));
 
                     String primaryDomainName = readString(row.getCell(10));
                     if (StringUtils.hasText(primaryDomainName)) {
@@ -309,6 +369,42 @@ public class ExpertService {
         if (type == CellType.NUMERIC) return BigDecimal.valueOf(cell.getNumericCellValue()).stripTrailingZeros().toPlainString();
         if (type == CellType.BOOLEAN) return String.valueOf(cell.getBooleanCellValue());
         return null;
+    }
+
+    private static String defaultString(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String toAvailabilityZh(String raw) {
+        if ("UNAVAILABLE".equalsIgnoreCase(raw)) {
+            return "不可用";
+        }
+        return "可用";
+    }
+
+    private static String parseAvailability(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return "AVAILABLE";
+        }
+        String t = raw.trim();
+        if ("UNAVAILABLE".equalsIgnoreCase(t) || "不可用".equals(t)) {
+            return "UNAVAILABLE";
+        }
+        if ("AVAILABLE".equalsIgnoreCase(t) || "可用".equals(t)) {
+            return "AVAILABLE";
+        }
+        throw new IllegalArgumentException("可用状态仅支持：可用/不可用");
+    }
+
+    private static void addExplicitDropdown(Sheet sheet, int firstRow, int lastRow, int col, String[] values) {
+        DataValidationHelper helper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = helper.createExplicitListConstraint(values);
+        CellRangeAddressList regions = new CellRangeAddressList(firstRow, lastRow, col, col);
+        DataValidation validation = helper.createValidation(constraint, regions);
+        validation.setErrorStyle(DataValidation.ErrorStyle.STOP);
+        validation.setShowErrorBox(true);
+        validation.createErrorBox("输入不合法", "请从下拉选项中选择");
+        sheet.addValidationData(validation);
     }
 
     private static Integer readInteger(Cell cell) {
@@ -525,7 +621,25 @@ public class ExpertService {
      * 根据领域查找专家
      */
     public List<Expert> findByDomainId(Long domainId) {
-        return expertRepository.findByDomainId(domainId);
+        if (domainId == null || domainId <= 0) {
+            return List.of();
+        }
+        Set<Long> subtree = domainService.collectSubtreeDomainIds(Set.of(domainId));
+        if (subtree.isEmpty()) {
+            return List.of();
+        }
+        return expertRepository.findByDomainIds(subtree);
+    }
+
+    public List<Expert> findByDomainIds(Set<Long> domainIds) {
+        if (domainIds == null || domainIds.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> subtree = domainService.collectSubtreeDomainIds(domainIds);
+        if (subtree.isEmpty()) {
+            return List.of();
+        }
+        return expertRepository.findByDomainIds(subtree);
     }
 
     /**

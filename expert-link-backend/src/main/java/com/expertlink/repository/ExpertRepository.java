@@ -40,6 +40,14 @@ public interface ExpertRepository extends JpaRepository<Expert, Long> {
             WHERE e.primaryDomain.id = :domainId OR d.id = :domainId
             """)
     List<Expert> findByDomainId(@Param("domainId") Long domainId);
+
+    @Query("""
+            SELECT DISTINCT e
+            FROM Expert e
+            LEFT JOIN e.domains d
+            WHERE e.primaryDomain.id IN :domainIds OR d.id IN :domainIds
+            """)
+    List<Expert> findByDomainIds(@Param("domainIds") Collection<Long> domainIds);
     
     // 根据技能ID查找专家（通过关联表）
     @Query("SELECT e FROM Expert e JOIN e.skills s WHERE s.id = :skillId")

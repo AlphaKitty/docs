@@ -109,6 +109,17 @@ class ExpertControllerTest {
     }
 
     @Test
+    void exportExpertsReturnsExcelBytes() {
+        byte[] bytes = new byte[]{7, 8, 9};
+        when(expertService.buildExportWorkbook()).thenReturn(bytes);
+
+        ResponseEntity<byte[]> response = controller.exportExperts();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertArrayEquals(bytes, response.getBody());
+    }
+
+    @Test
     void importExpertsWrapsResultInApiResponse() {
         var file = new MockMultipartFile("file", "experts.xlsx",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1});
