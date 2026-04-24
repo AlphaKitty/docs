@@ -185,4 +185,28 @@ export class EngagementRequestService {
       throw handleApiError(e, '放分失败')
     }
   }
+
+  static async rollback(id: number, reason: string): Promise<EngagementRequestRow> {
+    try {
+      const response = await apiClient.post<ApiResponse<EngagementRequestRow>>(
+        `/engagement-requests/${id}/rollback`,
+        { reason }
+      )
+      return unwrap(response)
+    } catch (e) {
+      throw handleApiError(e, '退回失败')
+    }
+  }
+
+  static async cancel(id: number, reason?: string): Promise<EngagementRequestRow> {
+    try {
+      const response = await apiClient.post<ApiResponse<EngagementRequestRow>>(
+        `/engagement-requests/${id}/cancel`,
+        { reason }
+      )
+      return unwrap(response)
+    } catch (e) {
+      throw handleApiError(e, '取消申请失败')
+    }
+  }
 }

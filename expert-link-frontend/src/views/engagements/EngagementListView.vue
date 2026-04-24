@@ -84,6 +84,7 @@ function statusText(s: string) {
     PENDING_STEWARD_SCORE_RELEASE: '待行管放分',
     COMPLETED: '已结项',
     REJECTED: '已驳回',
+    CANCELLED: '已取消',
   }
   return m[s] || s
 }

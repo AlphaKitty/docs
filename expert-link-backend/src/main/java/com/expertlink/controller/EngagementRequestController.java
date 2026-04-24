@@ -171,4 +171,23 @@ public class EngagementRequestController {
         ReleaseScoreRequest req = body != null ? body : new ReleaseScoreRequest();
         return ApiResponses.ok(engagementRequestService.releaseScore(principal.userId(), id, req));
     }
+
+    @PostMapping("/{id}/rollback")
+    @PreAuthorize("hasAnyRole('DOMAIN_STEWARD','EXPERT_USER','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<EngagementRequestResponse>> rollbackToPreviousNode(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody RollbackEngagementRequest body) {
+        return ApiResponses.ok(engagementRequestService.rollbackToPreviousNode(principal.userId(), id, body));
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','DOMAIN_STEWARD','EXPERT_USER','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<EngagementRequestResponse>> cancelByApplicant(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody(required = false) CancelEngagementRequest body) {
+        CancelEngagementRequest req = body != null ? body : new CancelEngagementRequest();
+        return ApiResponses.ok(engagementRequestService.cancelByApplicant(principal.userId(), id, req));
+    }
 }

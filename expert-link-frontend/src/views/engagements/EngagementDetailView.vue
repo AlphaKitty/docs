@@ -31,6 +31,22 @@
         title="行管退回说明"
         :description="row.evaluationRevisionNote"
       />
+      <el-alert
+        v-if="row.rollbackNote"
+        type="warning"
+        :closable="false"
+        class="mb"
+        title="节点退回说明"
+        :description="row.rollbackNote"
+      />
+      <el-alert
+        v-if="row.cancelReason"
+        type="info"
+        :closable="false"
+        class="mb"
+        title="取消说明"
+        :description="row.cancelReason"
+      />
 
       <el-descriptions :column="2" border>
         <el-descriptions-item label="正式编号">{{ row.referenceCode || '提交后生成' }}</el-descriptions-item>
@@ -226,6 +242,20 @@
         <el-input v-model="revisionReason" type="textarea" :rows="3" placeholder="退回原因（必填）" />
         <el-button type="danger" class="mt-row" :loading="acting" @click="doRequestRevision">确认退回</el-button>
       </el-card>
+
+      <el-card v-if="canRollback" class="mt" shadow="never">
+        <template #header>退回上一节点</template>
+        <p class="hint">将由当前节点责任人退回到流程上一节点，需填写退回说明。</p>
+        <el-input v-model="rollbackReason" type="textarea" :rows="3" placeholder="退回说明（必填）" />
+        <el-button type="warning" class="mt-row" :loading="acting" @click="doRollback">确认退回</el-button>
+      </el-card>
+
+      <el-card v-if="canCancel" class="mt" shadow="never">
+        <template #header>取消申请</template>
+        <p class="hint">申请人可取消当前申请（不可取消已结项/已驳回/已取消）。</p>
+        <el-input v-model="cancelReason" type="textarea" :rows="3" placeholder="取消说明（可选）" />
+        <el-button type="danger" class="mt-row" :loading="acting" @click="doCancel">确认取消</el-button>
+      </el-card>
     </template>
   </div>
 </template>
@@ -262,6 +292,8 @@ const releaseNote = ref('')
 const reassignExpertIds = ref<number[]>([])
 const reassignReason = ref('')
 const revisionReason = ref('')
+const rollbackReason = ref('')
+const cancelReason = ref('')
 const evalAttachmentPaths = ref<string[]>([])
 
 const evalForm = reactive({
@@ -301,11 +333,27 @@ const canExpertConfirm = computed(() => {
 })
 
 const canRequestRevision = computed(() => canStewardRelease.value)
+const isSuperAdmin = computed(() => auth.roles.includes('SUPER_ADMIN'))
+const canRollback = computed(() => {
+  if (!row.value) return false
+  if (row.value.status === 'PENDING_EXPERT_CONFIRM' || row.value.status === 'IN_PROGRESS') {
+    return Boolean(row.value.viewerAmongAssignedExperts) || isSuperAdmin.value
+  }
+  if (row.value.status === 'PENDING_STEWARD_SCORE_RELEASE') {
+    return canStewardRole.value
+  }
+  return false
+})
+const canCancel = computed(() => {
+  if (!row.value || !isApplicant.value) return false
+  return !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(row.value.status)
+})
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
   const s = row.value.status
   if (s === 'REJECTED') return { active: 2, stepsStatus: 'error' as const }
+  if (s === 'CANCELLED') return { active: 1, stepsStatus: 'error' as const }
   const order = [
     'DRAFT',
     'PENDING_STEWARD_ASSIGN',
@@ -328,6 +376,7 @@ function statusText(s: string) {
     PENDING_STEWARD_SCORE_RELEASE: '待行管放分',
     COMPLETED: '已结项',
     REJECTED: '已驳回',
+    CANCELLED: '已取消',
   }
   return m[s] || s
 }
@@ -345,6 +394,8 @@ async function load() {
       finalScore.value = undefined
     }
     revisionReason.value = ''
+    rollbackReason.value = ''
+    cancelReason.value = ''
     reassignExpertIds.value = r.assignedExpertIds?.length ? [...r.assignedExpertIds] : []
     reassignReason.value = ''
     assignExpertIds.value = []
@@ -537,6 +588,39 @@ async function doRequestRevision() {
     ElMessage.success('已退回，申请人可重评')
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '操作失败')
+  } finally {
+    acting.value = false
+  }
+}
+
+async function doRollback() {
+  if (!row.value) return
+  if (!rollbackReason.value.trim()) {
+    ElMessage.warning('请填写退回说明')
+    return
+  }
+  acting.value = true
+  try {
+    const r = await EngagementRequestService.rollback(row.value.id, rollbackReason.value.trim())
+    row.value = r
+    ElMessage.success('已退回上一节点')
+    rollbackReason.value = ''
+  } catch (e: unknown) {
+    ElMessage.error((e as Error)?.message || '退回失败')
+  } finally {
+    acting.value = false
+  }
+}
+
+async function doCancel() {
+  if (!row.value) return
+  acting.value = true
+  try {
+    const r = await EngagementRequestService.cancel(row.value.id, cancelReason.value.trim() || undefined)
+    row.value = r
+    ElMessage.success('申请已取消')
+  } catch (e: unknown) {
+    ElMessage.error((e as Error)?.message || '取消失败')
   } finally {
     acting.value = false
   }
