@@ -55,6 +55,7 @@ public class ExpertService {
             "经验年限", "小时费率", "可用状态", "主领域", "关联领域", "技能"
     };
     private static final String[] AVAILABILITY_OPTIONS_ZH = {"可用", "不可用"};
+    private static final Set<String> ELIGIBLE_EXPERT_ROLES = Set.of("EXPERT_USER", "SUPER_ADMIN");
 
     private final ExpertRepository expertRepository;
     private final UserRepository userRepository;
@@ -628,7 +629,9 @@ public class ExpertService {
         if (subtree.isEmpty()) {
             return List.of();
         }
-        return expertRepository.findByDomainIds(subtree);
+        return expertRepository.findByDomainIds(subtree).stream()
+                .filter(this::hasEligibleOwnerRole)
+                .toList();
     }
 
     public List<Expert> findByDomainIds(Set<Long> domainIds) {
@@ -639,7 +642,16 @@ public class ExpertService {
         if (subtree.isEmpty()) {
             return List.of();
         }
-        return expertRepository.findByDomainIds(subtree);
+        return expertRepository.findByDomainIds(subtree).stream()
+                .filter(this::hasEligibleOwnerRole)
+                .toList();
+    }
+
+    private boolean hasEligibleOwnerRole(Expert expert) {
+        if (expert == null || expert.getOwner() == null || expert.getOwner().getRoles() == null) {
+            return false;
+        }
+        return expert.getOwner().getRoles().stream().anyMatch(ELIGIBLE_EXPERT_ROLES::contains);
     }
 
     /**

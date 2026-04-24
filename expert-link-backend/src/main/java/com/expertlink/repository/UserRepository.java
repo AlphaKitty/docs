@@ -70,9 +70,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 尚未建立专家档案的活跃用户（用于从用户库拉取专家） */
     @Query("""
-            SELECT u FROM User u
+            SELECT DISTINCT u FROM User u
+            JOIN u.roles r
             WHERE COALESCE(u.isDeleted, false) = false
               AND COALESCE(u.isActive, true) = true
+              AND r IN ('EXPERT_USER', 'SUPER_ADMIN')
               AND NOT EXISTS (
                   SELECT 1 FROM Expert e
                   WHERE e.owner.id = u.id AND COALESCE(e.isDeleted, false) = false

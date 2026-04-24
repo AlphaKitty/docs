@@ -945,8 +945,11 @@ const changeAvatar = async () => {
     }
     expert.value.avatar = url
     ElMessage.success('头像已保存')
-  } catch {
-    // 用户取消输入
+  } catch (error: unknown) {
+    const message = (error as Error)?.message || ''
+    if (message && message !== 'cancel' && message !== 'close') {
+      ElMessage.error(message)
+    }
   }
 }
 
@@ -999,8 +1002,8 @@ const handleResize = () => {
 onMounted(async () => {
   try {
     await Promise.all([syncExpertFromApi(), syncMatchedProjects(), syncAssignableProjects()])
-  } catch (error) {
-    ElMessage.error('加载专家详情失败')
+  } catch (error: unknown) {
+    ElMessage.error((error as Error)?.message || '加载专家详情失败')
   }
 
   nextTick(() => {
