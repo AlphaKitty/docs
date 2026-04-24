@@ -173,6 +173,10 @@ const effectiveDomainIds = computed(() => {
   return Array.from(new Set(ids))
 })
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return (error as Error)?.message || fallback
+}
+
 function domainLabel(d: DomainOption): string {
   return d.hasSteward ? d.name : `${d.name}（未配置行管）`
 }
@@ -193,8 +197,8 @@ onMounted(async () => {
     } else {
       ElMessage.warning('当前没有已配置行管的领域，暂不可新建申请')
     }
-  } catch {
-    ElMessage.error('加载领域失败')
+  } catch (e: unknown) {
+    ElMessage.error(getErrorMessage(e, '加载领域失败'))
   } finally {
     loading.value = false
   }
@@ -208,8 +212,9 @@ async function loadDomainExperts() {
   }
   try {
     domainExpertOptions.value = await ExpertService.getExpertsByDomains(effectiveDomainIds.value)
-  } catch {
+  } catch (e: unknown) {
     domainExpertOptions.value = []
+    ElMessage.error(getErrorMessage(e, '加载领域专家失败'))
   }
 }
 
@@ -251,6 +256,7 @@ async function onSave() {
   try {
     const ok: number[] = []
     const failed: number[] = []
+    const failureMessages: string[] = []
     for (const domainId of effectiveDomainIds.value) {
       try {
         const created = await EngagementRequestService.createDraft({
@@ -263,12 +269,13 @@ async function onSave() {
           ...(form.designatedExpertIds.length > 0 ? { designatedExpertIds: form.designatedExpertIds } : {}),
         })
         ok.push(created.id)
-      } catch {
+      } catch (e: unknown) {
         failed.push(domainId)
+        failureMessages.push(getErrorMessage(e, `领域 ${domainId} 创建失败`))
       }
     }
     if (!ok.length) {
-      ElMessage.error('草稿创建失败')
+      ElMessage.error(failureMessages[0] || '草稿创建失败')
       return
     }
     if (ok.length === 1 && failed.length === 0) {
@@ -279,7 +286,9 @@ async function onSave() {
     if (!failed.length) {
       ElMessage.success(`已创建 ${ok.length} 个草稿`)
     } else {
-      ElMessage.warning(`已创建 ${ok.length} 个草稿，${failed.length} 个领域创建失败`)
+      ElMessage.warning(
+        `已创建 ${ok.length} 个草稿，${failed.length} 个领域创建失败：${failureMessages[0] || '请检查领域配置'}`
+      )
     }
     await router.push('/engagements/mine')
   } catch (e: unknown) {

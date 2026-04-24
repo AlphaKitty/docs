@@ -234,11 +234,14 @@ const rules: FormRules = {
   skills: [{ required: true, message: '请至少选择一个技能', trigger: 'change' }],
 }
 
+const getErrorMessage = (error: unknown, fallback: string) => (error as any)?.message || fallback
+
 async function loadDesignations() {
   try {
     designations.value = await ExpertDesignationService.list()
-  } catch {
+  } catch (e: unknown) {
     designations.value = []
+    ElMessage.error(getErrorMessage(e, '加载称谓失败'))
   }
 }
 
@@ -248,8 +251,9 @@ async function remoteSearchUsers(query: string) {
   try {
     const page = await ExpertService.getUserCandidates(query || '', 0, 30)
     userOptions.value = page.content
-  } catch {
+  } catch (e: unknown) {
     userOptions.value = []
+    ElMessage.error(getErrorMessage(e, '搜索用户失败'))
   } finally {
     userSearchLoading.value = false
   }
@@ -367,8 +371,8 @@ const submitEdit = async () => {
     await expertStore.updateExpert(expertId.value, { ...form })
     ElMessage.success('专家更新成功')
     await router.push(`/experts/${expertId.value}`)
-  } catch {
-    ElMessage.error('请检查表单')
+  } catch (e: unknown) {
+    ElMessage.error(getErrorMessage(e, '请检查表单'))
   } finally {
     submitting.value = false
   }

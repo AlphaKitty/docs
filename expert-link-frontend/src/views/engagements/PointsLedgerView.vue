@@ -59,8 +59,8 @@ async function reload() {
     const p = await PointsService.myLedger(page.value - 1, size.value)
     rows.value = p.content
     total.value = p.totalElements
-  } catch {
-    ElMessage.error('加载失败')
+  } catch (e: unknown) {
+    ElMessage.error((e as Error)?.message || '加载失败')
     rows.value = []
   } finally {
     loading.value = false

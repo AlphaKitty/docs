@@ -399,8 +399,8 @@ async function load() {
     reassignExpertIds.value = r.assignedExpertIds?.length ? [...r.assignedExpertIds] : []
     reassignReason.value = ''
     assignExpertIds.value = []
-  } catch {
-    ElMessage.error('加载失败')
+  } catch (e: unknown) {
+    ElMessage.error((e as Error)?.message || '加载失败')
     row.value = null
   } finally {
     loading.value = false
@@ -426,8 +426,9 @@ watch(
     if (!needList) return
     try {
       domainExpertOptions.value = await ExpertService.getExpertsByDomain(row.value.domainId)
-    } catch {
+    } catch (e: unknown) {
       domainExpertOptions.value = []
+      ElMessage.error((e as Error)?.message || '加载领域专家失败')
     }
   },
   { immediate: true }
@@ -642,7 +643,14 @@ async function downloadAttachment(path: string) {
       }
     )
     if (!res.ok) {
-      ElMessage.error('下载失败')
+      let backendMessage = ''
+      try {
+        const errJson = await res.json()
+        backendMessage = errJson?.message || ''
+      } catch {
+        backendMessage = ''
+      }
+      ElMessage.error(backendMessage || '下载失败')
       return
     }
     const blob = await res.blob()
@@ -652,8 +660,8 @@ async function downloadAttachment(path: string) {
     a.download = fileName
     a.click()
     URL.revokeObjectURL(url)
-  } catch {
-    ElMessage.error('下载失败')
+  } catch (e: unknown) {
+    ElMessage.error((e as Error)?.message || '下载失败')
   }
 }
 </script>

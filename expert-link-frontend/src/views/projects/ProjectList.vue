@@ -248,8 +248,8 @@ const deleteProject = (project: Project) => {
 onMounted(async () => {
   try {
     await projectStore.fetchProjects()
-  } catch (error) {
-    ElMessage.error('加载项目列表失败')
+  } catch (error: unknown) {
+    ElMessage.error((error as Error)?.message || '加载项目列表失败')
   }
 })
 </script>

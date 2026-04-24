@@ -185,9 +185,16 @@ public class ExpertController {
      */
     @GetMapping("/by-domains")
     public ResponseEntity<ApiResponse<List<Expert>>> getExpertsByDomains(
-            @RequestParam Set<Long> domainIds,
+            @RequestParam(name = "domainIds", required = false) Set<Long> domainIds,
+            @RequestParam(name = "domainIds[]", required = false) Set<Long> bracketDomainIds,
             Authentication authentication) {
-        Set<Long> deduped = domainIds == null ? Set.of() : new LinkedHashSet<>(domainIds);
+        Set<Long> deduped = new LinkedHashSet<>();
+        if (domainIds != null) {
+            deduped.addAll(domainIds);
+        }
+        if (bracketDomainIds != null) {
+            deduped.addAll(bracketDomainIds);
+        }
         List<Expert> experts = expertService.findByDomainIds(deduped).stream()
                 .map(e -> expertPrivacyService.maskForRead(e, authentication))
                 .toList();

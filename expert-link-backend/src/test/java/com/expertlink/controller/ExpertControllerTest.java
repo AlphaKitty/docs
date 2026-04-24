@@ -25,6 +25,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -132,5 +133,22 @@ class ExpertControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().getData().getSuccess());
+    }
+
+    @Test
+    void getExpertsByDomainsAcceptsBracketStyleDomainIds() {
+        Expert expert = Expert.builder().name("Alice").email("alice@example.com").build();
+        when(expertService.findByDomainIds(eq(Set.of(1L)))).thenReturn(List.of(expert));
+
+        ResponseEntity<ApiResponse<List<Expert>>> response = controller.getExpertsByDomains(
+                null,
+                Set.of(1L),
+                null
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().getData().size());
+        assertTrue(response.getBody().getData().get(0).getName().contains("Alice"));
     }
 }
