@@ -141,4 +141,18 @@ public class EngagementRequest extends BaseEntity {
     /** 改派记录 JSON 数组 */
     @Column(name = "reassignment_log", columnDefinition = "TEXT")
     private String reassignmentLog;
+
+    /** 节点退回说明（最近一次） */
+    @Column(name = "rollback_note", columnDefinition = "TEXT")
+    private String rollbackNote;
+
+    @Column(name = "rolled_back_at")
+    private LocalDateTime rolledBackAt;
+
+    /** 申请人取消说明 */
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 }

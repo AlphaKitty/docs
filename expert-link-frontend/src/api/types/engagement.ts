@@ -8,6 +8,7 @@ export type EngagementStatus =
   | 'PENDING_STEWARD_SCORE_RELEASE'
   | 'COMPLETED'
   | 'REJECTED'
+  | 'CANCELLED'
 
 export type EngagementMode = 'NAMED' | 'STEWARD_ASSIGN'
 
@@ -63,7 +64,11 @@ export interface EngagementRequestRow {
   suggestedScore?: number | null
   evaluationAttachmentUrls?: string[] | null
   evaluationRevisionNote?: string | null
+  rollbackNote?: string | null
+  rolledBackAt?: string | null
   reassignmentLog?: ReassignmentLogEntry[] | null
+  cancelReason?: string | null
+  cancelledAt?: string | null
   stewardFinalScore?: number | null
   stewardReleaseNote?: string | null
   completedAt?: string | null

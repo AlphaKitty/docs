@@ -17,5 +17,7 @@ public enum EngagementRequestStatus {
     /** 已结项 */
     COMPLETED,
     /** 已驳回（专家拒绝等） */
-    REJECTED
+    REJECTED,
+    /** 申请人已取消 */
+    CANCELLED
 }

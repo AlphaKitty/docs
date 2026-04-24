@@ -118,6 +118,18 @@ public class EngagementRequestService {
                 .orElse(false);
     }
 
+    private boolean isAssignedExpertOwner(Long userId, EngagementRequest e) {
+        if (e.getAssignedExperts() == null || e.getAssignedExperts().isEmpty()) {
+            return false;
+        }
+        for (Expert ex : e.getAssignedExperts()) {
+            if (ex.getId() != null && isExpertOwner(userId, ex.getId())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * 专家主领域或关联领域须覆盖申请单领域（超管指派仍校验数据一致性）。
      */
@@ -466,15 +478,15 @@ public class EngagementRequestService {
 
         Boolean viewerPending = null;
         Boolean viewerAmongAssigned = null;
-        if (viewerUserId != null && e.getStatus() == EngagementRequestStatus.PENDING_EXPERT_CONFIRM) {
+        if (viewerUserId != null) {
             Expert mine = expertRepository.findByOwnerId(viewerUserId).orElse(null);
-            if (mine != null && mine.getId() != null && e.getAssignedExperts() != null
-                    && e.getAssignedExperts().stream().anyMatch(x -> mine.getId().equals(x.getId()))) {
-                viewerAmongAssigned = true;
+            boolean amongAssigned = mine != null && mine.getId() != null && e.getAssignedExperts() != null
+                    && e.getAssignedExperts().stream().anyMatch(x -> mine.getId().equals(x.getId()));
+            viewerAmongAssigned = amongAssigned;
+            if (e.getStatus() == EngagementRequestStatus.PENDING_EXPERT_CONFIRM && amongAssigned) {
                 Boolean st = decisionAcceptedForExpert(e, mine.getId());
                 viewerPending = st == null;
             } else {
-                viewerAmongAssigned = false;
                 viewerPending = false;
             }
         }
@@ -535,7 +547,11 @@ public class EngagementRequestService {
                 .suggestedScore(e.getSuggestedScore())
                 .evaluationAttachmentUrls(readAttachmentUrlList(e.getEvaluationAttachmentUrls()))
                 .evaluationRevisionNote(e.getEvaluationRevisionNote())
+                .rollbackNote(e.getRollbackNote())
+                .rolledBackAt(e.getRolledBackAt())
                 .reassignmentLog(parseReassignmentLogForResponse(e.getReassignmentLog()))
+                .cancelReason(e.getCancelReason())
+                .cancelledAt(e.getCancelledAt())
                 .stewardFinalScore(e.getStewardFinalScore())
                 .stewardReleaseNote(e.getStewardReleaseNote())
                 .completedAt(e.getCompletedAt())
@@ -937,5 +953,61 @@ public class EngagementRequestService {
             }
         }
         return toResponse(saved);
+    }
+
+    @Transactional
+    public EngagementRequestResponse rollbackToPreviousNode(Long userId, Long id, RollbackEngagementRequest dto) {
+        assertCanUseEngagement(userId);
+        EngagementRequest e = requireEntity(id);
+        String reason = dto.getReason() == null ? "" : dto.getReason().trim();
+        if (reason.isBlank()) {
+            throw new IllegalArgumentException("退回说明不能为空");
+        }
+        EngagementRequestStatus current = e.getStatus();
+        EngagementRequestStatus target;
+        switch (current) {
+            case PENDING_EXPERT_CONFIRM -> {
+                if (!isSuperAdmin(userId) && !isAssignedExpertOwner(userId, e)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅当前节点责任专家可退回");
+                }
+                target = EngagementRequestStatus.PENDING_STEWARD_ASSIGN;
+            }
+            case IN_PROGRESS -> {
+                if (!isSuperAdmin(userId) && !isAssignedExpertOwner(userId, e)) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅当前节点责任专家可退回");
+                }
+                target = EngagementRequestStatus.PENDING_EXPERT_CONFIRM;
+            }
+            case PENDING_STEWARD_SCORE_RELEASE -> {
+                if (!isSuperAdmin(userId) && !domainService.isUserStewardOfDomain(userId, e.getDomain().getId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅当前节点责任行管可退回");
+                }
+                target = EngagementRequestStatus.IN_PROGRESS;
+            }
+            default -> throw new IllegalArgumentException("当前状态不支持退回上一节点");
+        }
+        e.setStatus(target);
+        e.setRollbackNote(reason);
+        e.setRolledBackAt(LocalDateTime.now());
+        return toResponse(engagementRequestRepository.save(e));
+    }
+
+    @Transactional
+    public EngagementRequestResponse cancelByApplicant(Long userId, Long id, CancelEngagementRequest dto) {
+        assertCanUseEngagement(userId);
+        EngagementRequest e = requireEntity(id);
+        if (!e.getApplicant().getId().equals(userId) && !isSuperAdmin(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅申请人可取消申请");
+        }
+        if (e.getStatus() == EngagementRequestStatus.COMPLETED
+                || e.getStatus() == EngagementRequestStatus.REJECTED
+                || e.getStatus() == EngagementRequestStatus.CANCELLED) {
+            throw new IllegalArgumentException("当前状态不可取消");
+        }
+        e.setStatus(EngagementRequestStatus.CANCELLED);
+        String reason = dto.getReason() == null ? null : dto.getReason().trim();
+        e.setCancelReason((reason == null || reason.isBlank()) ? null : reason);
+        e.setCancelledAt(LocalDateTime.now());
+        return toResponse(engagementRequestRepository.save(e));
     }
 }
