@@ -43,6 +43,12 @@ const router = createRouter({
       meta: { menuKey: 'experts' },
     },
     {
+      path: '/dashboard/expert-profile/:id',
+      name: 'DashboardExpertProfile',
+      component: () => import('@/views/experts/DashboardExpertProfile.vue'),
+      meta: { menuKey: 'dashboard' },
+    },
+    {
       path: '/projects',
       name: 'Projects',
       component: () => import('@/views/projects/ProjectList.vue'),
