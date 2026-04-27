@@ -4,6 +4,13 @@
     <el-container v-else class="app-container">
       <el-header class="app-header">
         <div class="header-left">
+          <el-button
+            class="menu-toggle-btn"
+            type="primary"
+            link
+            :icon="isSidebarCollapsed ? Expand : Fold"
+            @click="toggleSidebar"
+          />
           <h1 class="app-title">Expert Link 专家管理系统</h1>
         </div>
         <div class="header-right">
@@ -24,10 +31,11 @@
       </el-header>
 
       <el-container>
-        <el-aside width="220px" class="app-sidebar">
+        <el-aside :width="isSidebarCollapsed ? '64px' : '220px'" class="app-sidebar">
           <el-menu
             :default-active="activeMenu"
-            :default-openeds="sidebarOpeneds"
+            :default-openeds="isSidebarCollapsed ? [] : sidebarOpeneds"
+            :collapse="isSidebarCollapsed"
             class="sidebar-menu"
             router
           >
@@ -63,11 +71,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSystemSettingsStore } from '@/stores/system-settings'
 import {
+  Expand,
+  Fold,
   House,
   User,
   Document,
@@ -81,6 +91,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const settings = useSystemSettingsStore()
 void settings.ensureHydrated()
+const isSidebarCollapsed = ref(false)
 
 type MenuLeaf = {
   key: string
@@ -191,6 +202,20 @@ const onUserMenu = (cmd: string) => {
     void router.push('/login')
   }
 }
+
+const toggleSidebar = () => {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
+
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/') {
+      isSidebarCollapsed.value = true
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -214,6 +239,16 @@ const onUserMenu = (cmd: string) => {
   font-weight: 600;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-toggle-btn {
+  color: #fff;
+}
+
 .header-right .user-info {
   display: flex;
   align-items: center;
@@ -229,6 +264,7 @@ const onUserMenu = (cmd: string) => {
 .app-sidebar {
   background-color: #f8f9fa;
   border-right: 1px solid #e4e7ed;
+  transition: width 0.2s ease;
 }
 
 .sidebar-menu {

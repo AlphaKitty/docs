@@ -796,7 +796,7 @@ public class EngagementRequestService {
         e.setExpertResponseNote(dto.getNote());
         if (!accepted) {
             e.setExpertAccepted(false);
-            e.setStatus(EngagementRequestStatus.REJECTED);
+            e.setStatus(EngagementRequestStatus.PENDING_STEWARD_ASSIGN);
             return toResponse(engagementRequestRepository.save(e));
         }
         if (allExpertsAccepted(e)) {
