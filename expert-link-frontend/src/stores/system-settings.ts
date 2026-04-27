@@ -13,6 +13,7 @@ const DEFAULT_ROLE_GROUPS: Record<RoleGroupKey, AppRole[]> = {
 
 const DEFAULT_BASE_MENUS = [
   'dashboard',
+  'expertLibrary',
   'engagements.mine',
   'engagements.pointsLedger',
   'experts',
@@ -30,6 +31,7 @@ const DEFAULT_ROLE_MENUS: RoleMenus = {
   DOMAIN_STEWARD: [...DEFAULT_BASE_MENUS, 'engagements.stewardQueue'],
   SUPER_ADMIN: [
     'dashboard',
+    'expertLibrary',
     'engagements.mine',
     'engagements.new',
     'engagements.stewardQueue',

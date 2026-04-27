@@ -31,6 +31,48 @@ export interface AuthMe {
   pointsBalance?: number | null
 }
 
+export interface UserProfile {
+  userId: number
+  username: string
+  email: string
+  fullName: string
+  roles: string[]
+  pointsBalance?: number | null
+  phoneNumber?: string | null
+  bio?: string | null
+  avatar?: string | null
+  expertProfile?: ExpertProfile | null
+}
+
+export interface UpdateMyProfileRequest {
+  phoneNumber?: string
+  bio?: string
+  avatar?: string
+  expertProfile?: UpdateMyExpertProfileRequest
+}
+
+export interface ExpertProfile {
+  expertId: number
+  name?: string | null
+  currentPosition?: string | null
+  currentCompany?: string | null
+  wechatId?: string | null
+  yearsOfExperience?: number | null
+  hourlyRate?: number | null
+  availabilityStatus?: string | null
+  biography?: string | null
+}
+
+export interface UpdateMyExpertProfileRequest {
+  currentPosition?: string
+  currentCompany?: string
+  wechatId?: string
+  yearsOfExperience?: number
+  hourlyRate?: number
+  availabilityStatus?: 'AVAILABLE' | 'UNAVAILABLE'
+  biography?: string
+}
+
 /**
  * 注册请求（预留）
  */

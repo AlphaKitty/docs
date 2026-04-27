@@ -277,7 +277,7 @@ import {
 
 // 导入API服务
 import { StatsService } from '@/api/services'
-import { DashboardStats, ExpertStats, ProjectStats, SkillStats } from '@/api/types'
+import type { DashboardStats, ExpertStats, ProjectStats, SkillStats } from '@/api/types'
 
 // 导入ECharts配置
 import {

@@ -4,8 +4,11 @@ import com.expertlink.dto.ApiResponse;
 import com.expertlink.dto.ApiResponses;
 import com.expertlink.dto.PaginatedResponse;
 import com.expertlink.dto.user.CreateUserRequest;
+import com.expertlink.dto.user.UpdateMyProfileRequest;
 import com.expertlink.dto.user.UpdateUserRolesRequest;
+import com.expertlink.dto.user.UserProfileResponse;
 import com.expertlink.domain.User;
+import com.expertlink.security.AuthPrincipal;
 import com.expertlink.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashSet;
@@ -25,6 +30,23 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
+    @GetMapping("/me/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getMyProfile(
+            @AuthenticationPrincipal AuthPrincipal principal) {
+        UserProfileResponse profile = userService.getMyProfile(principal.userId());
+        return ApiResponses.ok(profile);
+    }
+
+    @PutMapping("/me/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateMyProfile(
+            @AuthenticationPrincipal AuthPrincipal principal,
+            @Valid @RequestBody UpdateMyProfileRequest body) {
+        UserProfileResponse profile = userService.updateMyProfile(principal.userId(), body);
+        return ApiResponses.ok(profile);
+    }
 
     /**
      * 获取所有用户（分页）

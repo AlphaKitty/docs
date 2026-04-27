@@ -137,6 +137,14 @@ export class EngagementRequestService {
       resolved: boolean
       comment?: string
       attachmentUrls?: string[]
+      expertEvaluations?: Array<{
+        expertId: number
+        professional: number
+        timeliness: number
+        attitude: number
+        resolved: boolean
+        comment?: string
+      }>
     }
   ): Promise<EngagementRequestRow> {
     try {

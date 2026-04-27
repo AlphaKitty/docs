@@ -1,7 +1,12 @@
 package com.expertlink.service;
 
 import com.expertlink.domain.User;
+import com.expertlink.domain.Expert;
+import com.expertlink.dto.user.UpdateMyProfileRequest;
+import com.expertlink.dto.user.UserProfileResponse;
+import com.expertlink.dto.user.ExpertProfileResponse;
 import com.expertlink.repository.UserRepository;
+import com.expertlink.repository.ExpertRepository;
 import com.expertlink.security.UserRole;
 import com.expertlink.security.UserRoleValidation;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -27,6 +33,7 @@ import java.util.Set;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ExpertRepository expertRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
@@ -46,6 +53,26 @@ public class UserService {
     public User findById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("用户不存在，ID: " + id));
+    }
+
+    public UserProfileResponse getMyProfile(Long userId) {
+        User user = findById(userId);
+        ExpertProfileResponse expertProfile = expertRepository.findByOwnerId(userId)
+                .map(this::toExpertProfile)
+                .orElse(null);
+        BigDecimal bal = user.getPointsBalance() != null ? user.getPointsBalance() : BigDecimal.ZERO;
+        return UserProfileResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .roles(new HashSet<>(user.getRoles()))
+                .pointsBalance(bal)
+                .phoneNumber(user.getPhoneNumber())
+                .bio(user.getBio())
+                .avatar(user.getAvatar())
+                .expertProfile(expertProfile)
+                .build();
     }
 
     /**
@@ -199,6 +226,62 @@ public class UserService {
 
         existingUser.setUpdatedAt(LocalDateTime.now());
         return userRepository.save(existingUser);
+    }
+
+    @Transactional
+    public UserProfileResponse updateMyProfile(Long userId, UpdateMyProfileRequest request) {
+        User existingUser = findById(userId);
+        existingUser.setPhoneNumber(request.getPhoneNumber());
+        existingUser.setBio(request.getBio());
+        existingUser.setAvatar(request.getAvatar());
+        existingUser.setUpdatedAt(LocalDateTime.now());
+        User saved = userRepository.save(existingUser);
+
+        if (request.getExpertProfile() != null) {
+            expertRepository.findByOwnerId(userId).ifPresent(expert -> {
+                var body = request.getExpertProfile();
+                expert.setCurrentPosition(body.getCurrentPosition());
+                expert.setCurrentCompany(body.getCurrentCompany());
+                expert.setWechatId(body.getWechatId());
+                expert.setYearsOfExperience(body.getYearsOfExperience());
+                expert.setHourlyRate(body.getHourlyRate());
+                expert.setAvailabilityStatus(body.getAvailabilityStatus());
+                expert.setBiography(body.getBiography());
+                expert.setUpdatedAt(LocalDateTime.now());
+                expertRepository.save(expert);
+            });
+        }
+
+        ExpertProfileResponse expertProfile = expertRepository.findByOwnerId(userId)
+                .map(this::toExpertProfile)
+                .orElse(null);
+        BigDecimal bal = saved.getPointsBalance() != null ? saved.getPointsBalance() : BigDecimal.ZERO;
+        return UserProfileResponse.builder()
+                .userId(saved.getId())
+                .username(saved.getUsername())
+                .fullName(saved.getFullName())
+                .email(saved.getEmail())
+                .roles(new HashSet<>(saved.getRoles()))
+                .pointsBalance(bal)
+                .phoneNumber(saved.getPhoneNumber())
+                .bio(saved.getBio())
+                .avatar(saved.getAvatar())
+                .expertProfile(expertProfile)
+                .build();
+    }
+
+    private ExpertProfileResponse toExpertProfile(Expert expert) {
+        return ExpertProfileResponse.builder()
+                .expertId(expert.getId())
+                .name(expert.getName())
+                .currentPosition(expert.getCurrentPosition())
+                .currentCompany(expert.getCurrentCompany())
+                .wechatId(expert.getWechatId())
+                .yearsOfExperience(expert.getYearsOfExperience())
+                .hourlyRate(expert.getHourlyRate())
+                .availabilityStatus(expert.getAvailabilityStatus())
+                .biography(expert.getBiography())
+                .build();
     }
 
     /**
