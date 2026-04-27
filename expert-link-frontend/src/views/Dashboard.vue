@@ -36,54 +36,68 @@
           </div>
         </template>
 
-        <el-collapse v-model="activeGroups">
+        <el-collapse v-model="activeParentGroups">
           <el-collapse-item
-            v-for="group in groupedExperts"
-            :key="group.name"
-            :name="group.name"
+            v-for="parent in groupedExperts"
+            :key="parent.name"
+            :name="parent.name"
           >
             <template #title>
               <div class="group-title">
-                <span>{{ group.name }}</span>
-                <el-tag size="small" type="info">{{ group.experts.length }} 人</el-tag>
+                <span>{{ parent.name }}</span>
+                <el-tag size="small" type="info">{{ parent.expertCount }} 人</el-tag>
               </div>
             </template>
 
-            <div class="expert-card-list">
-              <div
-                v-for="expert in group.experts"
-                :key="expert.id"
-                class="expert-card"
-                @click="goToExpertProfile(expert.id)"
+            <el-collapse v-model="activeChildGroups">
+              <el-collapse-item
+                v-for="child in parent.children"
+                :key="`${parent.name}-${child.name}`"
+                :name="`${parent.name}:${child.name}`"
               >
-                <div class="expert-left">
-                  <el-avatar :size="42" :src="expert.avatar" />
-                  <div class="expert-main">
-                    <div class="name-row">
-                      <span class="name">{{ expert.name }}</span>
-                      <el-tag :type="getStatusType(expert.status)" size="small">
-                        {{ getStatusText(expert.status) }}
-                      </el-tag>
+                <template #title>
+                  <div class="group-title child-title">
+                    <span>{{ child.name }}</span>
+                    <el-tag size="small" type="info">{{ child.experts.length }} 人</el-tag>
+                  </div>
+                </template>
+                <div class="expert-card-list">
+                  <div
+                    v-for="expert in child.experts"
+                    :key="expert.id"
+                    class="expert-card"
+                    @click="goToExpertProfile(expert.id)"
+                  >
+                    <div class="expert-left">
+                      <el-avatar :size="42" :src="expert.avatar" />
+                      <div class="expert-main">
+                        <div class="name-row">
+                          <span class="name">{{ expert.name }}</span>
+                          <el-tag :type="getStatusType(expert.status)" size="small">
+                            {{ getStatusText(expert.status) }}
+                          </el-tag>
+                        </div>
+                        <div class="meta">{{ expert.title || '未填写职位' }}</div>
+                        <div class="skills">
+                          <el-tag
+                            v-for="skill in expert.skills.slice(0, 4)"
+                            :key="skill"
+                            size="small"
+                            class="skill-tag"
+                          >
+                            {{ skill }}
+                          </el-tag>
+                        </div>
+                      </div>
                     </div>
-                    <div class="meta">{{ expert.title || '未填写职位' }}</div>
-                    <div class="skills">
-                      <el-tag
-                        v-for="skill in expert.skills.slice(0, 4)"
-                        :key="skill"
-                        size="small"
-                        class="skill-tag"
-                      >
-                        {{ skill }}
-                      </el-tag>
+                    <div class="expert-right">
+                      <span class="score-label">评分</span>
+                      <span class="score">{{ Number(expert.rating || 0).toFixed(1) }}</span>
                     </div>
                   </div>
                 </div>
-                <div class="expert-right">
-                  <span class="score-label">评分</span>
-                  <span class="score">{{ Number(expert.rating || 0).toFixed(1) }}</span>
-                </div>
-              </div>
-            </div>
+              </el-collapse-item>
+            </el-collapse>
           </el-collapse-item>
         </el-collapse>
 
@@ -118,6 +132,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useExpertStore } from '@/stores/expert'
+import { DomainService } from '@/api/services/domain.service'
+import type { DomainDetail } from '@/api/types'
 
 type FilterKey =
   | 'jobNo'
@@ -132,7 +148,9 @@ type FilterKey =
 
 const router = useRouter()
 const expertStore = useExpertStore()
-const activeGroups = ref<string[]>([])
+const activeParentGroups = ref<string[]>([])
+const activeChildGroups = ref<string[]>([])
+const allDomains = ref<DomainDetail[]>([])
 
 const filterFields: Array<{ label: string; key: FilterKey }> = [
   { label: '工号', key: 'jobNo' },
@@ -181,19 +199,57 @@ const normalizedExperts = computed(() => {
 })
 
 const groupedExperts = computed(() => {
-  const groupMap = new Map<string, typeof normalizedExperts.value>()
+  const domainMap = new Map<string, DomainDetail>()
+  allDomains.value.forEach((domain) => {
+    domainMap.set(domain.name, domain)
+  })
+
+  type ChildGroup = { name: string; experts: typeof normalizedExperts.value }
+  type ParentGroup = { name: string; children: ChildGroup[]; expertCount: number }
+  const parentMap = new Map<string, Map<string, typeof normalizedExperts.value>>()
+
   normalizedExperts.value.forEach((expert) => {
     const domains = expert.domains?.length ? expert.domains : ['未分配领域']
     domains.forEach((domain) => {
-      const list = groupMap.get(domain) || []
+      const matchedDomain = domainMap.get(domain)
+      let parentName = '未分配领域'
+      let childName = domain
+
+      if (matchedDomain) {
+        if (matchedDomain.parentId != null) {
+          const parent = allDomains.value.find((item) => item.id === matchedDomain.parentId)
+          parentName = parent?.name || '未分配领域'
+          childName = matchedDomain.name
+        } else {
+          parentName = matchedDomain.name
+          childName = '未分类子领域'
+        }
+      }
+
+      if (!parentMap.has(parentName)) {
+        parentMap.set(parentName, new Map<string, typeof normalizedExperts.value>())
+      }
+
+      const childMap = parentMap.get(parentName)!
+      const list = childMap.get(childName) || []
       list.push(expert)
-      groupMap.set(domain, list)
+      childMap.set(childName, list)
     })
   })
 
-  return [...groupMap.entries()]
-    .map(([name, experts]) => ({ name, experts }))
-    .sort((a, b) => b.experts.length - a.experts.length)
+  const result: ParentGroup[] = [...parentMap.entries()].map(([parentName, childMap]) => {
+    const children = [...childMap.entries()]
+      .map(([childName, experts]) => ({ name: childName, experts }))
+      .sort((a, b) => b.experts.length - a.experts.length)
+    const expertCount = children.reduce((sum, item) => sum + item.experts.length, 0)
+    return {
+      name: parentName,
+      children,
+      expertCount
+    }
+  })
+
+  return result.sort((a, b) => b.expertCount - a.expertCount)
 })
 
 const rankingExperts = computed(() => {
@@ -209,7 +265,8 @@ const rankingExperts = computed(() => {
 })
 
 const triggerSearch = () => {
-  activeGroups.value = []
+  activeParentGroups.value = []
+  activeChildGroups.value = []
 }
 
 const resetFilters = () => {
@@ -223,7 +280,8 @@ const resetFilters = () => {
   filters.department = ''
   filters.client = ''
   filters.bg = ''
-  activeGroups.value = []
+  activeParentGroups.value = []
+  activeChildGroups.value = []
 }
 
 const getStatusType = (status: string) => {
@@ -257,9 +315,17 @@ const goToExpertProfile = (expertId: number) => {
 }
 
 onMounted(async () => {
-  if (expertStore.experts.length) return
   try {
-    await expertStore.fetchExperts()
+    const tasks: Promise<unknown>[] = []
+    if (!expertStore.experts.length) {
+      tasks.push(expertStore.fetchExperts())
+    }
+    tasks.push(
+      DomainService.getDomains({ page: 0, size: 500 }).then((res) => {
+        allDomains.value = res.content || []
+      })
+    )
+    await Promise.all(tasks)
   } catch {
     ElMessage.error('加载专家库数据失败')
   }
@@ -333,6 +399,10 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.child-title {
+  padding-left: 10px;
 }
 
 .expert-card-list {
