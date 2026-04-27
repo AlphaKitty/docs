@@ -489,10 +489,14 @@ const loadDashboardData = async () => {
 // 初始化图表
 const initCharts = () => {
   if (expertGrowthChart.value && expertTrendData.value.length > 0) {
+    const computeGrowth = (current: number, previous: number) => {
+      if (!previous) return 0
+      return Number((((current - previous) / previous) * 100).toFixed(1))
+    }
     const chartData = expertTrendData.value.map((item, index) => ({
       month: `第${index + 1}月`,
       experts: item.value,
-      growth: index > 0 ? ((item.value - expertTrendData.value[index - 1].value) / expertTrendData.value[index - 1].value * 100).toFixed(1) : 0
+      growth: index > 0 ? computeGrowth(item.value, expertTrendData.value[index - 1].value) : 0,
     }))
     expertChartInstance = initChart(expertGrowthChart.value, getExpertGrowthChartOption(chartData))
   }
@@ -537,10 +541,14 @@ const refreshExpertChart = async () => {
     expertTrendData.value = trendData
     
     if (expertChartInstance && expertTrendData.value.length > 0) {
+      const computeGrowth = (current: number, previous: number) => {
+        if (!previous) return 0
+        return Number((((current - previous) / previous) * 100).toFixed(1))
+      }
       const chartData = expertTrendData.value.map((item, index) => ({
         month: `第${index + 1}月`,
         experts: item.value,
-        growth: index > 0 ? ((item.value - expertTrendData.value[index - 1].value) / expertTrendData.value[index - 1].value * 100).toFixed(1) : 0
+        growth: index > 0 ? computeGrowth(item.value, expertTrendData.value[index - 1].value) : 0,
       }))
       expertChartInstance.setOption(getExpertGrowthChartOption(chartData))
     }
