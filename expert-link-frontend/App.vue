@@ -23,6 +23,7 @@
               <el-dropdown-menu>
                 <el-dropdown-item disabled>{{ auth.email }}</el-dropdown-item>
                 <el-dropdown-item disabled>积分余额：{{ auth.pointsBalance.toFixed(2) }}</el-dropdown-item>
+                <el-dropdown-item command="profile">个人信息配置</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -109,6 +110,7 @@ type MenuGroup = {
 
 const menuConfig: MenuGroup[] = [
   { key: 'dashboard', label: '仪表盘', icon: House, path: '/' },
+  { key: 'expertLibrary', label: '专家库', icon: User, path: '/expert-library' },
   {
     key: 'engagements',
     label: '调用申请',
@@ -174,6 +176,7 @@ const activeMenu = computed(() => {
     return '/engagements/mine'
   }
 
+  if (p.startsWith('/expert-library') || p.startsWith('/dashboard/expert-profile')) return '/expert-library'
   if (p.startsWith('/experts')) return '/experts'
   if (p.startsWith('/domains')) return '/domains'
   if (p.startsWith('/skills')) return '/skills'
@@ -197,6 +200,10 @@ const userName = computed(() => auth.displayName)
 const displayInitial = computed(() => (auth.username || '?').slice(0, 1).toUpperCase())
 
 const onUserMenu = (cmd: string) => {
+  if (cmd === 'profile') {
+    void router.push('/profile')
+    return
+  }
   if (cmd === 'logout') {
     auth.logout()
     void router.push('/login')

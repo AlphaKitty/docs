@@ -196,21 +196,38 @@
       <el-card v-if="isApplicant && row.status === 'IN_PROGRESS'" class="mt" shadow="never">
         <template #header>任务结束评价</template>
         <el-form label-width="100px">
-          <el-form-item label="专业度 (1-5)">
-            <el-input-number v-model="evalForm.professional" :min="1" :max="5" />
-          </el-form-item>
-          <el-form-item label="时效 (1-5)">
-            <el-input-number v-model="evalForm.timeliness" :min="1" :max="5" />
-          </el-form-item>
-          <el-form-item label="态度 (1-5)">
-            <el-input-number v-model="evalForm.attitude" :min="1" :max="5" />
-          </el-form-item>
-          <el-form-item label="是否解决">
-            <el-switch v-model="evalForm.resolved" />
-          </el-form-item>
-          <el-form-item label="评语">
-            <el-input v-model="evalForm.comment" type="textarea" :rows="3" />
-          </el-form-item>
+          <el-alert
+            type="info"
+            :closable="false"
+            class="mb"
+            title="请对每位专家分别评价"
+            description="每位被指派专家都需要独立填写：专业度、时效、态度、是否解决和评语。"
+          />
+          <el-card
+            v-for="item in expertEvalForms"
+            :key="item.expertId"
+            class="mt"
+            shadow="never"
+          >
+            <template #header>
+              <span>专家：{{ item.expertName || `#${item.expertId}` }}</span>
+            </template>
+            <el-form-item label="专业度 (1-5)">
+              <el-input-number v-model="item.professional" :min="1" :max="5" />
+            </el-form-item>
+            <el-form-item label="时效 (1-5)">
+              <el-input-number v-model="item.timeliness" :min="1" :max="5" />
+            </el-form-item>
+            <el-form-item label="态度 (1-5)">
+              <el-input-number v-model="item.attitude" :min="1" :max="5" />
+            </el-form-item>
+            <el-form-item label="是否解决">
+              <el-switch v-model="item.resolved" />
+            </el-form-item>
+            <el-form-item label="评语">
+              <el-input v-model="item.comment" type="textarea" :rows="3" placeholder="请输入该专家的评价" />
+            </el-form-item>
+          </el-card>
           <el-form-item label="附件">
             <el-upload :http-request="onEvalUpload" :limit="8" :show-file-list="true">
               <el-button type="primary">上传文件</el-button>
@@ -261,7 +278,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { UploadRequestOptions } from 'element-plus'
@@ -296,13 +313,17 @@ const rollbackReason = ref('')
 const cancelReason = ref('')
 const evalAttachmentPaths = ref<string[]>([])
 
-const evalForm = reactive({
-  professional: 5,
-  timeliness: 5,
-  attitude: 5,
-  resolved: true,
-  comment: '',
-})
+type ExpertEvalFormItem = {
+  expertId: number
+  expertName: string
+  professional: number
+  timeliness: number
+  attitude: number
+  resolved: boolean
+  comment: string
+}
+
+const expertEvalForms = ref<ExpertEvalFormItem[]>([])
 
 const id = computed(() => Number(route.params.id))
 
@@ -399,12 +420,32 @@ async function load() {
     reassignExpertIds.value = r.assignedExpertIds?.length ? [...r.assignedExpertIds] : []
     reassignReason.value = ''
     assignExpertIds.value = []
+    initExpertEvalForms(r)
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '加载失败')
     row.value = null
   } finally {
     loading.value = false
   }
+}
+
+function initExpertEvalForms(r: EngagementRequestRow) {
+  const ids = r.assignedExpertIds?.length
+    ? r.assignedExpertIds
+    : (r.assignedExpertId ? [r.assignedExpertId] : [])
+  const names = r.assignedExpertNames?.length
+    ? r.assignedExpertNames
+    : (r.assignedExpertName ? [r.assignedExpertName] : [])
+
+  expertEvalForms.value = ids.map((expertId, idx) => ({
+    expertId,
+    expertName: names[idx] || '',
+    professional: 5,
+    timeliness: 5,
+    attitude: 5,
+    resolved: true,
+    comment: '',
+  }))
 }
 
 watch(
@@ -538,15 +579,47 @@ function removeAttachment(i: number) {
 
 async function doEval() {
   if (!row.value) return
+  if (!expertEvalForms.value.length) {
+    ElMessage.warning('当前没有可评价的专家')
+    return
+  }
+  const missingComment = expertEvalForms.value.some((item) => !item.comment.trim())
+  if (missingComment) {
+    ElMessage.warning('请为每位专家填写评语')
+    return
+  }
+
+  const professionalAvg = Math.round(
+    expertEvalForms.value.reduce((sum, item) => sum + item.professional, 0) / expertEvalForms.value.length
+  )
+  const timelinessAvg = Math.round(
+    expertEvalForms.value.reduce((sum, item) => sum + item.timeliness, 0) / expertEvalForms.value.length
+  )
+  const attitudeAvg = Math.round(
+    expertEvalForms.value.reduce((sum, item) => sum + item.attitude, 0) / expertEvalForms.value.length
+  )
+  const allResolved = expertEvalForms.value.every((item) => item.resolved)
+  const mergedComment = expertEvalForms.value
+    .map((item) => `${item.expertName || `专家#${item.expertId}`}: ${item.comment.trim()}`)
+    .join('\n')
+
   acting.value = true
   try {
     const r = await EngagementRequestService.submitEvaluation(row.value.id, {
-      professional: evalForm.professional,
-      timeliness: evalForm.timeliness,
-      attitude: evalForm.attitude,
-      resolved: evalForm.resolved,
-      comment: evalForm.comment || undefined,
+      professional: professionalAvg,
+      timeliness: timelinessAvg,
+      attitude: attitudeAvg,
+      resolved: allResolved,
+      comment: mergedComment || undefined,
       attachmentUrls: evalAttachmentPaths.value.length ? [...evalAttachmentPaths.value] : undefined,
+      expertEvaluations: expertEvalForms.value.map((item) => ({
+        expertId: item.expertId,
+        professional: item.professional,
+        timeliness: item.timeliness,
+        attitude: item.attitude,
+        resolved: item.resolved,
+        comment: item.comment.trim() || undefined,
+      })),
     })
     row.value = r
     ElMessage.success('评价已提交')

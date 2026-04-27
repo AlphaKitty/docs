@@ -26,6 +26,7 @@ public class SystemSettingService {
     private static final List<String> DEFAULT_SUPER_ADMIN = List.of("SUPER_ADMIN");
     private static final List<String> MENU_KEYS = List.of(
             "dashboard",
+            "expertLibrary",
             "engagements.mine",
             "engagements.new",
             "engagements.stewardQueue",
@@ -143,6 +144,7 @@ public class SystemSettingService {
     private Map<String, List<String>> defaultRoleMenusMap() {
         List<String> base = List.of(
                 "dashboard",
+                "expertLibrary",
                 "engagements.mine",
                 "engagements.new",
                 "engagements.pointsLedger",

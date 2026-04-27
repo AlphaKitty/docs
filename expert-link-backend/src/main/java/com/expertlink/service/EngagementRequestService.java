@@ -451,6 +451,19 @@ public class EngagementRequestService {
         return base.compareTo(cap) > 0 ? cap : base;
     }
 
+    private static BigDecimal computeSuggestedScore(SubmitEvaluationRequest.ExpertEvaluationItem dto) {
+        double p = dto.getProfessional();
+        double t = dto.getTimeliness();
+        double a = dto.getAttitude();
+        double avg = (p + t + a) / 3.0;
+        BigDecimal base = BigDecimal.valueOf(avg / 5.0 * 100).setScale(2, RoundingMode.HALF_UP);
+        if (Boolean.FALSE.equals(dto.getResolved())) {
+            base = base.multiply(BigDecimal.valueOf(0.9)).setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal cap = new BigDecimal("100");
+        return base.compareTo(cap) > 0 ? cap : base;
+    }
+
     private void assertDomainHasSteward(Domain domain) {
         if (domain == null || domain.getStewards() == null || domain.getStewards().isEmpty()) {
             throw new IllegalArgumentException("该领域未配置行管，暂不可发起申请");
@@ -847,12 +860,83 @@ public class EngagementRequestService {
         if (e.getStatus() != EngagementRequestStatus.IN_PROGRESS) {
             throw new IllegalArgumentException("仅执行中可申请评价");
         }
-        e.setEvalProfessional(dto.getProfessional());
-        e.setEvalTimeliness(dto.getTimeliness());
-        e.setEvalAttitude(dto.getAttitude());
-        e.setEvalResolved(dto.getResolved());
-        e.setEvalComment(dto.getComment());
-        e.setSuggestedScore(computeSuggestedScore(dto));
+
+        List<SubmitEvaluationRequest.ExpertEvaluationItem> byExpert = dto.getExpertEvaluations();
+        if (byExpert != null && !byExpert.isEmpty()) {
+            if (e.getAssignedExperts() == null || e.getAssignedExperts().isEmpty()) {
+                throw new IllegalArgumentException("当前申请单未指派专家，无法按专家评价");
+            }
+            Set<Long> assignedIds = e.getAssignedExperts().stream()
+                    .map(Expert::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            LinkedHashMap<Long, SubmitEvaluationRequest.ExpertEvaluationItem> evalMap = new LinkedHashMap<>();
+            for (SubmitEvaluationRequest.ExpertEvaluationItem item : byExpert) {
+                if (item == null || item.getExpertId() == null) {
+                    continue;
+                }
+                if (!assignedIds.contains(item.getExpertId())) {
+                    throw new IllegalArgumentException("存在不在指派名单内的专家评价");
+                }
+                if (evalMap.containsKey(item.getExpertId())) {
+                    throw new IllegalArgumentException("同一专家存在重复评价");
+                }
+                evalMap.put(item.getExpertId(), item);
+            }
+            if (evalMap.size() != assignedIds.size()) {
+                throw new IllegalArgumentException("请对每位被指派专家分别评价后再提交");
+            }
+
+            int sumProfessional = 0;
+            int sumTimeliness = 0;
+            int sumAttitude = 0;
+            boolean allResolved = true;
+            BigDecimal scoreSum = BigDecimal.ZERO;
+            List<Map<String, Object>> detailRows = new ArrayList<>();
+
+            for (Expert ex : e.getAssignedExperts().stream().sorted(Comparator.comparing(Expert::getId)).toList()) {
+                SubmitEvaluationRequest.ExpertEvaluationItem item = evalMap.get(ex.getId());
+                if (item == null) {
+                    throw new IllegalArgumentException("请对每位被指派专家分别评价后再提交");
+                }
+                sumProfessional += item.getProfessional();
+                sumTimeliness += item.getTimeliness();
+                sumAttitude += item.getAttitude();
+                allResolved = allResolved && Boolean.TRUE.equals(item.getResolved());
+                BigDecimal singleScore = computeSuggestedScore(item);
+                scoreSum = scoreSum.add(singleScore);
+
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("expertId", ex.getId());
+                row.put("expertName", ex.getName());
+                row.put("professional", item.getProfessional());
+                row.put("timeliness", item.getTimeliness());
+                row.put("attitude", item.getAttitude());
+                row.put("resolved", item.getResolved());
+                row.put("comment", item.getComment());
+                row.put("suggestedScore", singleScore);
+                detailRows.add(row);
+            }
+
+            int size = evalMap.size();
+            e.setEvalProfessional((int) Math.round(sumProfessional * 1.0 / size));
+            e.setEvalTimeliness((int) Math.round(sumTimeliness * 1.0 / size));
+            e.setEvalAttitude((int) Math.round(sumAttitude * 1.0 / size));
+            e.setEvalResolved(allResolved);
+            e.setSuggestedScore(scoreSum.divide(BigDecimal.valueOf(size), 2, RoundingMode.HALF_UP));
+            try {
+                e.setEvalComment(objectMapper.writeValueAsString(detailRows));
+            } catch (JsonProcessingException ex) {
+                throw new IllegalArgumentException("评价详情序列化失败");
+            }
+        } else {
+            e.setEvalProfessional(dto.getProfessional());
+            e.setEvalTimeliness(dto.getTimeliness());
+            e.setEvalAttitude(dto.getAttitude());
+            e.setEvalResolved(dto.getResolved());
+            e.setEvalComment(dto.getComment());
+            e.setSuggestedScore(computeSuggestedScore(dto));
+        }
         e.setEvaluationRevisionNote(null);
         try {
             if (dto.getAttachmentUrls() != null && !dto.getAttachmentUrls().isEmpty()) {

@@ -19,6 +19,12 @@ const router = createRouter({
       meta: { menuKey: 'dashboard' },
     },
     {
+      path: '/expert-library',
+      name: 'ExpertLibrary',
+      component: () => import('@/views/ExpertLibrary.vue'),
+      meta: { menuKey: 'expertLibrary' },
+    },
+    {
       path: '/experts',
       name: 'Experts',
       component: () => import('@/views/experts/ExpertList.vue'),
@@ -46,7 +52,7 @@ const router = createRouter({
       path: '/dashboard/expert-profile/:id',
       name: 'DashboardExpertProfile',
       component: () => import('@/views/experts/DashboardExpertProfile.vue'),
-      meta: { menuKey: 'dashboard' },
+      meta: { menuKey: 'expertLibrary' },
     },
     {
       path: '/projects',
@@ -192,6 +198,11 @@ const router = createRouter({
       name: 'Settings',
       component: () => import('@/views/settings/SystemSettings.vue'),
       meta: { menuKey: 'settings' },
+    },
+    {
+      path: '/profile',
+      name: 'ProfileSettings',
+      component: () => import('@/views/profile/ProfileSettingsView.vue'),
     },
   ],
 })
