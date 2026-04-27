@@ -804,9 +804,13 @@ public class EngagementRequestService {
         }
         long targetExpertId = resolveTargetExpertIdForDecision(userId, e, dto);
         boolean accepted = Boolean.TRUE.equals(dto.getAccepted());
+        String note = dto.getNote() == null ? "" : dto.getNote().trim();
+        if (!accepted && note.isBlank()) {
+            throw new IllegalArgumentException("拒绝时请填写备注说明");
+        }
         applyExpertDecisionRow(e, targetExpertId, accepted, dto.getNote());
         e.setExpertRespondedAt(LocalDateTime.now());
-        e.setExpertResponseNote(dto.getNote());
+        e.setExpertResponseNote(note.isBlank() ? null : note);
         if (!accepted) {
             e.setExpertAccepted(false);
             e.setStatus(EngagementRequestStatus.PENDING_STEWARD_ASSIGN);

@@ -40,6 +40,14 @@
         :description="row.rollbackNote"
       />
       <el-alert
+        v-if="row.expertResponseNote"
+        type="warning"
+        :closable="false"
+        class="mb"
+        title="专家拒绝说明"
+        :description="row.expertResponseNote"
+      />
+      <el-alert
         v-if="row.cancelReason"
         type="info"
         :closable="false"
@@ -186,7 +194,7 @@
 
       <el-card v-if="canExpertConfirm" class="mt" shadow="never">
         <template #header>专家确认（需被指派的专家账号登录）</template>
-        <el-input v-model="expertNote" placeholder="备注（可选）" />
+        <el-input v-model="expertNote" placeholder="备注（拒绝时必填）" />
         <div class="mt-row">
           <el-button type="success" :loading="acting" @click="expertDecision(true)">接受</el-button>
           <el-button type="danger" :loading="acting" @click="expertDecision(false)">拒绝</el-button>
@@ -544,10 +552,20 @@ async function doReassign() {
 
 async function expertDecision(accepted: boolean) {
   if (!row.value) return
+  const trimmedNote = expertNote.value.trim()
+  if (!accepted && !trimmedNote) {
+    ElMessage.warning('拒绝时请填写备注说明')
+    return
+  }
   acting.value = true
   try {
-    const r = await EngagementRequestService.expertDecision(row.value.id, accepted, expertNote.value)
+    const r = await EngagementRequestService.expertDecision(
+      row.value.id,
+      accepted,
+      trimmedNote || undefined
+    )
     row.value = r
+    expertNote.value = ''
     ElMessage.success(accepted ? '已接受' : '已拒绝')
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '操作失败')

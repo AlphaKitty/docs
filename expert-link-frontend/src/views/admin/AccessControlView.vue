@@ -94,7 +94,6 @@ const menuLabelMap: Record<string, string> = {
   experts: '专家管理',
   domains: '专家入库',
   skills: '技能管理',
-  projects: '项目列表',
   analysis: '统计分析',
   settings: '系统设置',
   'admin.users': '用户与角色',
@@ -106,7 +105,7 @@ const menuLabelMap: Record<string, string> = {
 const menuKeys = computed(() => settings.menuKeys)
 const roles = USER_ROLE_OPTIONS.map((o) => o.value).filter((r) => r !== 'VISITOR')
 
-const topLevelMenuOrder = ['dashboard', 'expertLibrary', 'experts', 'domains', 'skills', 'projects', 'analysis'] as const
+const topLevelMenuOrder = ['dashboard', 'expertLibrary', 'experts', 'domains', 'skills', 'analysis'] as const
 const collapsibleGroupOrder = ['engagements', 'system'] as const
 const groupLabelMap: Record<(typeof collapsibleGroupOrder)[number], string> = {
   engagements: '调用申请',

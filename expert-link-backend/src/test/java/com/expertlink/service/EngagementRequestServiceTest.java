@@ -23,6 +23,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -90,5 +91,49 @@ class EngagementRequestServiceTest {
 
         assertEquals(EngagementRequestStatus.PENDING_STEWARD_ASSIGN.name(), response.status());
         assertFalse(Boolean.TRUE.equals(response.expertAccepted()));
+    }
+
+    @Test
+    void expertRejectShouldRequireNote() {
+        Long userId = 100L;
+        Long requestId = 11L;
+        Long expertId = 201L;
+
+        User expertUser = User.builder().username("expert-user").roles(Set.of(UserRole.EXPERT_USER.name())).build();
+        expertUser.setId(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(expertUser));
+
+        User applicant = User.builder().username("applicant").roles(Set.of(UserRole.REGULAR_USER.name())).build();
+        applicant.setId(301L);
+
+        Domain domain = Domain.builder().name("测试领域").build();
+        domain.setId(1L);
+
+        Expert assignedExpert = Expert.builder().name("专家B").build();
+        assignedExpert.setId(expertId);
+        Expert ownerExpert = Expert.builder().name("专家B").build();
+        ownerExpert.setId(expertId);
+
+        EngagementRequest request = EngagementRequest.builder()
+                .status(EngagementRequestStatus.PENDING_EXPERT_CONFIRM)
+                .mode(EngagementMode.STEWARD_ASSIGN)
+                .taskType(EngagementTaskType.PROBLEM_SOLVING)
+                .domain(domain)
+                .applicant(applicant)
+                .startAt(LocalDateTime.now())
+                .assignedExperts(new LinkedHashSet<>(Set.of(assignedExpert)))
+                .assignmentExpertDecisions("[{\"expertId\":201,\"accepted\":null,\"note\":null,\"at\":null}]")
+                .build();
+        request.setId(requestId);
+
+        when(engagementRequestRepository.findById(requestId)).thenReturn(Optional.of(request));
+        when(expertRepository.findByOwnerId(userId)).thenReturn(Optional.of(ownerExpert));
+
+        ExpertDecisionRequest dto = new ExpertDecisionRequest();
+        dto.setAccepted(false);
+        dto.setNote("   ");
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> service.expertDecision(userId, requestId, dto));
+        assertEquals("拒绝时请填写备注说明", ex.getMessage());
     }
 }
