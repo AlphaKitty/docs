@@ -57,3 +57,40 @@ export const RESULT_SUMMARY_PLACEHOLDER_BY_ITEM: Record<string, string> = {
   担任讲师: '讲授课程信息、授课数据、优化与案例',
   '行业/业务交流': '交流事件信息、输出与影响、内部分享情况',
 }
+
+export const BASE_SCORE_BY_ITEM_SCOPE: Record<string, Record<string, number>> = {
+  技术评审: { 跨BG: 0.5, BG内: 0.25 },
+  人才评审: { 跨BG: 1, BG内: 1 },
+  技术支持: { 跨BG: 2, BG内: 1 },
+  '行业/技术洞察': { 默认: 1 },
+  技术成果推广: { 跨BG: 3, BG内: 2, BU内: 1 },
+  人才标准建设: { 编写组长: 2, 编写成员: 1 },
+  专业论文: { 国家级核心刊物: 3, 省市级刊物: 2, 公司内刊物: 1 },
+  知识产权: { 发明专利: 2, 实用新型专利: 1 },
+  项目经验沉淀: { 默认: 1 },
+  知识库建设: { 默认: 0.33 },
+  流程制度建设: { 主责建设: 2, 参与建设: 1 },
+  课程开发: { 主责开发: 2, 参与开发: 1 },
+  担任导师: { '14+员工导师&A/B+转正': 3, '14+员工导师B转正或14-员工A/B+转正': 2, '14-员工B转正': 1 },
+  担任讲师: { '公司/专业线级单次>=50人授课': 3, '一级部门内单次>=30人授课': 2, '二级部门内单次>=10人授课': 1 },
+  '行业/业务交流': { 行业交流会代表公司发言: 2, '来访/去访中作为代表分享交流': 1 },
+}
+
+export const APPLICANT_LEVELS_BY_ITEM: Record<string, Array<{ label: string; coefficient: number }>> = {
+  技术评审: [
+    { label: '优秀（主导技术方向）', coefficient: 1.5 },
+    { label: '一般（问题解决，表现一般）', coefficient: 0.8 },
+    { label: '无贡献（未发挥专家作用）', coefficient: 0 },
+  ],
+  人才评审: [
+    { label: '积极（积极主动评审）', coefficient: 1.2 },
+    { label: '正常（正常评审表现）', coefficient: 0.8 },
+    { label: '一般（交流较少且打分偏高）', coefficient: 0.5 },
+  ],
+  技术支持: [
+    { label: '卓越（完全解决难点）', coefficient: 2 },
+    { label: '优秀（给出正确方向并协同解决）', coefficient: 1.5 },
+    { label: '一般（问题解决，表现一般）', coefficient: 0.8 },
+    { label: '无贡献（未发挥专家作用）', coefficient: 0 },
+  ],
+}

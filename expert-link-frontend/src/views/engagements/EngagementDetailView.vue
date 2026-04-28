@@ -293,8 +293,8 @@
             type="info"
             :closable="false"
             class="mb"
-            title="请对每位专家分别评价"
-            description="每位被指派专家都需要独立填写：专业度、时效、态度、是否解决和评语。"
+            title="请对每位专家分别评价（按积分项目规则）"
+            :description="`当前积分项目：${currentPointsItem || '未识别'}，请补充贡献范围、评分等级和评语。`"
           />
           <el-card
             v-for="item in expertEvalForms"
@@ -305,6 +305,35 @@
             <template #header>
               <span>专家：{{ item.expertName || `#${item.expertId}` }}</span>
             </template>
+            <el-form-item label="贡献范围">
+              <el-select v-model="item.contributionScope" :disabled="!currentContributionScopeOptions.length">
+                <el-option
+                  v-for="scope in currentContributionScopeOptions"
+                  :key="scope"
+                  :label="scope"
+                  :value="scope"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="标准分">
+              <el-input :model-value="item.baseScore.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="申请人评分等级">
+              <el-select v-model="item.applicantLevel" :disabled="!currentApplicantLevelOptions.length">
+                <el-option
+                  v-for="level in currentApplicantLevelOptions"
+                  :key="level.label"
+                  :label="level.label"
+                  :value="level.label"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="评分系数">
+              <el-input :model-value="item.applicantCoefficient.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="建议分">
+              <el-input :model-value="item.applicantSuggestedScore.toFixed(2)" disabled />
+            </el-form-item>
             <el-form-item label="专业度 (1-5)">
               <el-input-number v-model="item.professional" :min="1" :max="5" />
             </el-form-item>
@@ -341,7 +370,49 @@
       <el-card v-if="canStewardRelease" class="mt" shadow="never">
         <template #header>积分放分（结项）</template>
         <p v-if="row.suggestedScore != null" class="hint">系统建议分：{{ row.suggestedScore }}，可直接作为放分参考。</p>
-        <el-input-number v-model="finalScore" :precision="2" :step="0.5" placeholder="确认分（默认用建议分）" />
+        <el-alert
+          type="info"
+          :closable="false"
+          class="mb"
+          title="行管可对每位专家确认、调整或不认可评分；调整/不认可必须填写理由。"
+        />
+        <el-card v-for="item in expertEvalForms" :key="`steward-${item.expertId}`" class="mt" shadow="never">
+          <template #header>
+            <span>专家：{{ item.expertName || `#${item.expertId}` }}</span>
+          </template>
+          <el-form label-width="120px">
+            <el-form-item label="申请人建议分">
+              <el-input :model-value="item.applicantSuggestedScore.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="审核结果">
+              <el-select v-model="item.stewardDecision">
+                <el-option label="认可" value="APPROVE" />
+                <el-option label="调整" value="ADJUST" />
+                <el-option label="不认可" value="REJECT" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="最终分">
+              <el-input-number
+                v-model="item.stewardFinalScore"
+                :precision="2"
+                :step="0.5"
+                :min="0"
+                :disabled="item.stewardDecision === 'APPROVE' || item.stewardDecision === 'REJECT'"
+              />
+            </el-form-item>
+            <el-form-item label="评分理由">
+              <el-input
+                v-model="item.stewardReason"
+                type="textarea"
+                :rows="2"
+                :placeholder="item.stewardDecision === 'APPROVE' ? '认可可选填；调整/不认可必填' : '请填写调整/不认可理由'"
+              />
+            </el-form-item>
+          </el-form>
+        </el-card>
+        <el-form-item label="确认总分" class="mt-row">
+          <el-input-number v-model="finalScore" :precision="2" :step="0.5" placeholder="自动汇总，可手动改" />
+        </el-form-item>
         <el-input v-model="releaseNote" class="mt-row" placeholder="说明（可选）" />
         <el-button type="success" class="mt-row" :loading="acting" @click="doRelease">确认放分并结项</el-button>
       </el-card>
@@ -384,6 +455,8 @@ import type { ExpertDetail } from '@/api/types/expert'
 import type { EngagementProgressLog, EngagementRequestRow } from '@/api/types/engagement'
 import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
 import {
+  APPLICANT_LEVELS_BY_ITEM,
+  BASE_SCORE_BY_ITEM_SCOPE,
   CONTRIBUTION_SCOPE_BY_ITEM,
   PROJECT_INFO_VISIBLE_CATEGORIES,
   RESULT_SUMMARY_HIDDEN_ITEMS,
@@ -418,11 +491,19 @@ const progressDraftAttachments = ref<string[]>([])
 type ExpertEvalFormItem = {
   expertId: number
   expertName: string
+  contributionScope: string
+  baseScore: number
+  applicantLevel: string
+  applicantCoefficient: number
+  applicantSuggestedScore: number
   professional: number
   timeliness: number
   attitude: number
   resolved: boolean
   comment: string
+  stewardDecision: 'APPROVE' | 'ADJUST' | 'REJECT'
+  stewardFinalScore: number
+  stewardReason: string
 }
 
 const expertEvalForms = ref<ExpertEvalFormItem[]>([])
@@ -547,6 +628,13 @@ const structuredInfoGroups = computed(() => {
 })
 
 const fusionExtraText = computed(() => parsedTaskDescription.value.extraText)
+const currentPointsItem = computed(() => parsedTaskDescription.value.map['积分项目'] || '')
+const currentContributionScopeOptions = computed(() => {
+  return CONTRIBUTION_SCOPE_BY_ITEM[currentPointsItem.value] || []
+})
+const currentApplicantLevelOptions = computed(() => {
+  return APPLICANT_LEVELS_BY_ITEM[currentPointsItem.value] || []
+})
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
@@ -636,6 +724,31 @@ function isFieldRequired(label: string, all: Record<string, string>): boolean {
   return false
 }
 
+function getBaseScore(pointsItem: string, contributionScope: string): number {
+  const map = BASE_SCORE_BY_ITEM_SCOPE[pointsItem] || {}
+  if (contributionScope && typeof map[contributionScope] === 'number') return map[contributionScope]
+  if (typeof map['默认'] === 'number') return map['默认']
+  return 0
+}
+
+function getApplicantCoefficient(pointsItem: string, applicantLevel: string): number {
+  const options = APPLICANT_LEVELS_BY_ITEM[pointsItem] || []
+  return options.find((item) => item.label === applicantLevel)?.coefficient ?? 1
+}
+
+function syncApplicantScore(item: ExpertEvalFormItem): void {
+  const pointsItem = currentPointsItem.value
+  item.baseScore = getBaseScore(pointsItem, item.contributionScope)
+  item.applicantCoefficient = getApplicantCoefficient(pointsItem, item.applicantLevel)
+  item.applicantSuggestedScore = Number((item.baseScore * item.applicantCoefficient).toFixed(2))
+  if (item.stewardDecision === 'APPROVE') {
+    item.stewardFinalScore = item.applicantSuggestedScore
+  }
+  if (item.stewardDecision === 'REJECT') {
+    item.stewardFinalScore = 0
+  }
+}
+
 function progressStorageKey(requestId: number): string {
   return `engagement-progress-logs:${requestId}`
 }
@@ -713,15 +826,31 @@ function initExpertEvalForms(r: EngagementRequestRow) {
   const names = r.assignedExpertNames?.length
     ? r.assignedExpertNames
     : (r.assignedExpertName ? [r.assignedExpertName] : [])
+  const scopeOptions = CONTRIBUTION_SCOPE_BY_ITEM[currentPointsItem.value] || []
+  const levelOptions = APPLICANT_LEVELS_BY_ITEM[currentPointsItem.value] || []
+  const defaultScope = scopeOptions[0] || ''
+  const defaultLevel = levelOptions[0]?.label || ''
 
   expertEvalForms.value = ids.map((expertId, idx) => ({
     expertId,
     expertName: names[idx] || '',
+    contributionScope: defaultScope,
+    baseScore: getBaseScore(currentPointsItem.value, defaultScope),
+    applicantLevel: defaultLevel,
+    applicantCoefficient: getApplicantCoefficient(currentPointsItem.value, defaultLevel),
+    applicantSuggestedScore: Number(
+      (getBaseScore(currentPointsItem.value, defaultScope) * getApplicantCoefficient(currentPointsItem.value, defaultLevel)).toFixed(2)
+    ),
     professional: 5,
     timeliness: 5,
     attitude: 5,
     resolved: true,
     comment: '',
+    stewardDecision: 'APPROVE',
+    stewardFinalScore: Number(
+      (getBaseScore(currentPointsItem.value, defaultScope) * getApplicantCoefficient(currentPointsItem.value, defaultLevel)).toFixed(2)
+    ),
+    stewardReason: '',
   }))
 }
 
@@ -730,6 +859,44 @@ watch(
   () => {
     void load()
   }
+)
+
+watch(
+  () => currentPointsItem.value,
+  () => {
+    for (const item of expertEvalForms.value) {
+      const scopeOptions = currentContributionScopeOptions.value
+      const levelOptions = currentApplicantLevelOptions.value
+      if (scopeOptions.length && !scopeOptions.includes(item.contributionScope)) {
+        item.contributionScope = scopeOptions[0]
+      }
+      if (levelOptions.length && !levelOptions.some((opt) => opt.label === item.applicantLevel)) {
+        item.applicantLevel = levelOptions[0]?.label || ''
+      }
+      syncApplicantScore(item)
+    }
+  }
+)
+
+watch(
+  () =>
+    expertEvalForms.value.map((item) => ({
+      scope: item.contributionScope,
+      level: item.applicantLevel,
+      decision: item.stewardDecision,
+      suggested: item.applicantSuggestedScore,
+      final: item.stewardFinalScore,
+    })),
+  () => {
+    for (const item of expertEvalForms.value) {
+      syncApplicantScore(item)
+    }
+    if (expertEvalForms.value.length) {
+      const sum = expertEvalForms.value.reduce((acc, item) => acc + Number(item.stewardFinalScore || 0), 0)
+      finalScore.value = Number(sum.toFixed(2))
+    }
+  },
+  { deep: true }
 )
 
 watch(
@@ -929,6 +1096,20 @@ async function doEval() {
     ElMessage.warning('当前没有可评价的专家')
     return
   }
+  const missingScope = currentContributionScopeOptions.value.length
+    ? expertEvalForms.value.some((item) => !item.contributionScope)
+    : false
+  if (missingScope) {
+    ElMessage.warning('请为每位专家选择贡献范围')
+    return
+  }
+  const missingLevel = currentApplicantLevelOptions.value.length
+    ? expertEvalForms.value.some((item) => !item.applicantLevel)
+    : false
+  if (missingLevel) {
+    ElMessage.warning('请为每位专家选择申请人评分等级')
+    return
+  }
   const missingComment = expertEvalForms.value.some((item) => !item.comment.trim())
   if (missingComment) {
     ElMessage.warning('请为每位专家填写评语')
@@ -946,7 +1127,10 @@ async function doEval() {
   )
   const allResolved = expertEvalForms.value.every((item) => item.resolved)
   const mergedComment = expertEvalForms.value
-    .map((item) => `${item.expertName || `专家#${item.expertId}`}: ${item.comment.trim()}`)
+    .map(
+      (item) =>
+        `${item.expertName || `专家#${item.expertId}`}: 范围=${item.contributionScope || '—'}，等级=${item.applicantLevel || '—'}，建议分=${item.applicantSuggestedScore.toFixed(2)}，评语=${item.comment.trim()}`
+    )
     .join('\n')
 
   acting.value = true
@@ -964,7 +1148,16 @@ async function doEval() {
         timeliness: item.timeliness,
         attitude: item.attitude,
         resolved: item.resolved,
-        comment: item.comment.trim() || undefined,
+        comment:
+          JSON.stringify({
+            text: item.comment.trim() || undefined,
+            pointsItem: currentPointsItem.value,
+            contributionScope: item.contributionScope || undefined,
+            baseScore: item.baseScore,
+            applicantLevel: item.applicantLevel || undefined,
+            applicantCoefficient: item.applicantCoefficient,
+            applicantSuggestedScore: item.applicantSuggestedScore,
+          }) || undefined,
       })),
     })
     row.value = r
@@ -982,12 +1175,37 @@ async function doRelease() {
     ElMessage.warning('请先补充至少 1 条执行协同记录，再进行积分放分')
     return
   }
+  const missingStewardReason = expertEvalForms.value.some(
+    (item) => (item.stewardDecision === 'ADJUST' || item.stewardDecision === 'REJECT') && !item.stewardReason.trim()
+  )
+  if (missingStewardReason) {
+    ElMessage.warning('调整或不认可时请填写评分理由')
+    return
+  }
+  const computedFinalScore = Number(
+    expertEvalForms.value.reduce((acc, item) => acc + Number(item.stewardFinalScore || 0), 0).toFixed(2)
+  )
+  if (finalScore.value == null || Number.isNaN(Number(finalScore.value))) {
+    finalScore.value = computedFinalScore
+  }
+  const structuredReleaseNote = JSON.stringify({
+    pointsItem: currentPointsItem.value,
+    items: expertEvalForms.value.map((item) => ({
+      expertId: item.expertId,
+      decision: item.stewardDecision,
+      suggestedScore: item.applicantSuggestedScore,
+      finalScore: item.stewardFinalScore,
+      reason: item.stewardReason.trim() || undefined,
+    })),
+  })
   acting.value = true
   try {
     const r = await EngagementRequestService.releaseScore(
       row.value.id,
       finalScore.value,
-      releaseNote.value || undefined
+      releaseNote.value
+        ? `${releaseNote.value}\n${structuredReleaseNote}`
+        : structuredReleaseNote
     )
     row.value = r
     ElMessage.success('已结项')
