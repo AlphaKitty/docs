@@ -960,8 +960,10 @@ public class EngagementRequestService {
     public EvaluationFileUploadResponse uploadEvaluationFile(Long userId, Long id, MultipartFile file) throws IOException {
         assertCanUseEngagement(userId);
         EngagementRequest e = requireEntity(id);
-        if (!e.getApplicant().getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅申请人可上传评价附件");
+        boolean isApplicant = e.getApplicant().getId().equals(userId);
+        boolean isAssignedExpert = isAssignedExpertOwner(userId, e);
+        if (!isApplicant && !(e.getStatus() == EngagementRequestStatus.IN_PROGRESS && isAssignedExpert)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "仅申请人或被指派专家可上传过程附件");
         }
         if (e.getStatus() != EngagementRequestStatus.IN_PROGRESS) {
             throw new IllegalArgumentException("仅执行中可上传评价附件");

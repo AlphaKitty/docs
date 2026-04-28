@@ -199,26 +199,54 @@ const normalizedExperts = computed(() => {
 })
 
 const groupedExperts = computed(() => {
-  const domainMap = new Map<string, DomainDetail>()
+  const domainByName = new Map<string, DomainDetail>()
+  const domainById = new Map<number, DomainDetail>()
   allDomains.value.forEach((domain) => {
-    domainMap.set(domain.name, domain)
+    domainByName.set(domain.name, domain)
+    domainById.set(domain.id, domain)
   })
 
-  type ChildGroup = { name: string; experts: typeof normalizedExperts.value }
+  type ExpertRow = (typeof normalizedExperts.value)[number]
+  type ChildGroup = { name: string; experts: ExpertRow[] }
   type ParentGroup = { name: string; children: ChildGroup[]; expertCount: number }
-  const parentMap = new Map<string, Map<string, typeof normalizedExperts.value>>()
+  const parentMap = new Map<string, Map<string, ExpertRow[]>>()
+
+  const ensureChild = (parentName: string, childName: string) => {
+    if (!parentMap.has(parentName)) parentMap.set(parentName, new Map())
+    const childMap = parentMap.get(parentName)!
+    if (!childMap.has(childName)) childMap.set(childName, [])
+  }
+
+  /** 先铺全量领域骨架：有父领域的作为子节点；顶级领域下保留「未分类子领域」用于仅挂在父级上的专家 */
+  for (const d of allDomains.value) {
+    const pid = d.parentId
+    if (pid != null && pid !== 0 && domainById.has(pid)) {
+      const parent = domainById.get(pid)!
+      ensureChild(parent.name, d.name)
+    }
+  }
+  for (const d of allDomains.value) {
+    const pid = d.parentId
+    const isRoot = pid == null || pid === 0 || !domainById.has(pid)
+    if (isRoot) {
+      ensureChild(d.name, '未分类子领域')
+    }
+  }
+
+  const UNASSIGNED = '未分配领域'
 
   normalizedExperts.value.forEach((expert) => {
-    const domains = expert.domains?.length ? expert.domains : ['未分配领域']
+    const domains = expert.domains?.length ? expert.domains : [UNASSIGNED]
     domains.forEach((domain) => {
-      const matchedDomain = domainMap.get(domain)
-      let parentName = '未分配领域'
+      const matchedDomain = domainByName.get(domain)
+      let parentName = UNASSIGNED
       let childName = domain
 
       if (matchedDomain) {
-        if (matchedDomain.parentId != null) {
-          const parent = allDomains.value.find((item) => item.id === matchedDomain.parentId)
-          parentName = parent?.name || '未分配领域'
+        const pId = matchedDomain.parentId
+        if (pId != null && pId !== 0 && domainById.has(pId)) {
+          const parent = domainById.get(pId)!
+          parentName = parent.name
           childName = matchedDomain.name
         } else {
           parentName = matchedDomain.name
@@ -226,30 +254,31 @@ const groupedExperts = computed(() => {
         }
       }
 
-      if (!parentMap.has(parentName)) {
-        parentMap.set(parentName, new Map<string, typeof normalizedExperts.value>())
-      }
-
-      const childMap = parentMap.get(parentName)!
-      const list = childMap.get(childName) || []
+      ensureChild(parentName, childName)
+      const list = parentMap.get(parentName)!.get(childName)!
       list.push(expert)
-      childMap.set(childName, list)
     })
   })
 
   const result: ParentGroup[] = [...parentMap.entries()].map(([parentName, childMap]) => {
-    const children = [...childMap.entries()]
-      .map(([childName, experts]) => ({ name: childName, experts }))
-      .sort((a, b) => b.experts.length - a.experts.length)
+    const children = [...childMap.entries()].map(([childName, experts]) => ({ name: childName, experts }))
+    children.sort((a, b) => {
+      const u = a.name === '未分类子领域' ? 1 : 0
+      const v = b.name === '未分类子领域' ? 1 : 0
+      if (u !== v) return u - v
+      return a.name.localeCompare(b.name, 'zh-CN')
+    })
     const expertCount = children.reduce((sum, item) => sum + item.experts.length, 0)
-    return {
-      name: parentName,
-      children,
-      expertCount
-    }
+    return { name: parentName, children, expertCount }
   })
 
-  return result.sort((a, b) => b.expertCount - a.expertCount)
+  result.sort((a, b) => {
+    if (a.name === UNASSIGNED) return 1
+    if (b.name === UNASSIGNED) return -1
+    return a.name.localeCompare(b.name, 'zh-CN')
+  })
+
+  return result
 })
 
 const rankingExperts = computed(() => {
@@ -314,17 +343,27 @@ const goToExpertProfile = (expertId: number) => {
   router.push(`/dashboard/expert-profile/${expertId}`)
 }
 
+async function fetchAllDomains(): Promise<void> {
+  const pageSize = 500
+  let page = 0
+  const acc: DomainDetail[] = []
+  for (;;) {
+    const res = await DomainService.getDomains({ page, size: pageSize })
+    const chunk = res.content || []
+    acc.push(...chunk)
+    if (chunk.length < pageSize || res.last) break
+    page += 1
+  }
+  allDomains.value = acc
+}
+
 onMounted(async () => {
   try {
     const tasks: Promise<unknown>[] = []
     if (!expertStore.experts.length) {
       tasks.push(expertStore.fetchExperts())
     }
-    tasks.push(
-      DomainService.getDomains({ page: 0, size: 500 }).then((res) => {
-        allDomains.value = res.content || []
-      })
-    )
+    tasks.push(fetchAllDomains())
     await Promise.all(tasks)
   } catch {
     ElMessage.error('加载专家库数据失败')

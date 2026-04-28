@@ -22,6 +22,10 @@
       </el-steps>
 
       <el-tag class="mb">{{ statusText(row.status) }}</el-tag>
+      <div class="phase-row">
+        <el-tag type="primary">调用阶段：{{ callPhaseText }}</el-tag>
+        <el-tag type="success">积分阶段：{{ pointsPhaseText }}</el-tag>
+      </div>
 
       <el-alert
         v-if="row.evaluationRevisionNote"
@@ -67,7 +71,7 @@
         <el-descriptions-item label="类型">{{ taskTypeLabel(row.taskType) }}</el-descriptions-item>
         <el-descriptions-item label="开始">{{ formatDateTimeDisplay(row.startAt) }}</el-descriptions-item>
         <el-descriptions-item label="结束">{{ formatDateTimeDisplay(row.endAt) }}</el-descriptions-item>
-        <el-descriptions-item label="任务描述" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="任务描述（原文）" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
         <el-descriptions-item label="指定专家">
           {{
             row.designatedExpertNames?.length
@@ -90,6 +94,87 @@
           {{ row.stewardFinalScore }}
         </el-descriptions-item>
       </el-descriptions>
+
+      <el-card v-if="structuredInfoGroups.length || fusionExtraText" class="mt" shadow="never">
+        <template #header>申请表详情（融合字段）</template>
+        <div class="structured-groups">
+          <el-card
+            v-for="group in structuredInfoGroups"
+            :key="group.title"
+            shadow="never"
+            class="structured-group"
+          >
+            <template #header>{{ group.title }}</template>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item
+                v-for="item in group.items"
+                :key="`${group.title}-${item.label}`"
+                :label="item.required ? `${item.label}（必填）` : item.label"
+              >
+                {{ item.value }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </div>
+        <el-descriptions v-if="fusionExtraText" :column="1" border class="mt-row">
+          <el-descriptions-item label="补充描述">
+            {{ fusionExtraText }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-card v-if="canViewProgressLogs" class="mt" shadow="never">
+        <template #header>执行协同记录（过程证据）</template>
+        <p class="hint">执行阶段由申请人和被指派专家持续补充过程材料，作为积分放分依据之一。</p>
+        <template v-if="canEditProgressLogs">
+          <el-input
+            v-model="progressLogDraft"
+            type="textarea"
+            :rows="3"
+            placeholder="填写本次进展、问题、方案、结论等"
+          />
+          <el-upload :http-request="onProgressUpload" :limit="6" :show-file-list="true" class="mt-row">
+            <el-button type="primary" plain>上传过程附件</el-button>
+          </el-upload>
+          <div v-if="progressDraftAttachments.length" class="mt-row">
+            <el-tag
+              v-for="(p, i) in progressDraftAttachments"
+              :key="`${p}-${i}`"
+              closable
+              class="tag"
+              @close="removeProgressAttachment(i)"
+            >
+              {{ p }}
+            </el-tag>
+          </div>
+          <div class="mt-row">
+            <el-button type="primary" :loading="postingProgress" @click="submitProgressLog">发布过程记录</el-button>
+          </div>
+        </template>
+        <el-empty v-if="!progressLogs.length" description="暂无过程记录" />
+        <div v-else class="progress-list">
+          <el-card v-for="item in progressLogs" :key="item.id" shadow="hover" class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-author">{{ item.authorName }}（{{ progressRoleText(item.authorRole) }}）</span>
+              <span>{{ formatDateTimeDisplay(item.createdAt) }}</span>
+            </div>
+            <div class="progress-content">{{ item.content }}</div>
+            <div v-if="item.attachments?.length" class="mt-row">
+              <el-space wrap>
+                <el-button
+                  v-for="(path, idx) in item.attachments"
+                  :key="`${item.id}-${idx}`"
+                  link
+                  type="primary"
+                  @click="downloadAttachment(path)"
+                >
+                  附件 {{ idx + 1 }}
+                </el-button>
+              </el-space>
+            </div>
+          </el-card>
+        </div>
+      </el-card>
 
       <el-card v-if="row.reassignmentLog?.length" class="mt" shadow="never">
         <template #header>改派记录</template>
@@ -202,14 +287,14 @@
       </el-card>
 
       <el-card v-if="isApplicant && row.status === 'IN_PROGRESS'" class="mt" shadow="never">
-        <template #header>任务结束评价</template>
+        <template #header>任务结束评价（触发积分审核）</template>
         <el-form label-width="100px">
           <el-alert
             type="info"
             :closable="false"
             class="mb"
-            title="请对每位专家分别评价"
-            description="每位被指派专家都需要独立填写：专业度、时效、态度、是否解决和评语。"
+            title="请对每位专家分别评价（按积分项目规则）"
+            :description="`当前积分项目：${currentPointsItem || '未识别'}，请补充贡献范围、评分等级和评语。`"
           />
           <el-card
             v-for="item in expertEvalForms"
@@ -220,6 +305,35 @@
             <template #header>
               <span>专家：{{ item.expertName || `#${item.expertId}` }}</span>
             </template>
+            <el-form-item label="贡献范围">
+              <el-select v-model="item.contributionScope" :disabled="!currentContributionScopeOptions.length">
+                <el-option
+                  v-for="scope in currentContributionScopeOptions"
+                  :key="scope"
+                  :label="scope"
+                  :value="scope"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="标准分">
+              <el-input :model-value="item.baseScore.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="申请人评分等级">
+              <el-select v-model="item.applicantLevel" :disabled="!currentApplicantLevelOptions.length">
+                <el-option
+                  v-for="level in currentApplicantLevelOptions"
+                  :key="level.label"
+                  :label="level.label"
+                  :value="level.label"
+                />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="评分系数">
+              <el-input :model-value="item.applicantCoefficient.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="建议分">
+              <el-input :model-value="item.applicantSuggestedScore.toFixed(2)" disabled />
+            </el-form-item>
             <el-form-item label="专业度 (1-5)">
               <el-input-number v-model="item.professional" :min="1" :max="5" />
             </el-form-item>
@@ -254,9 +368,51 @@
       </el-card>
 
       <el-card v-if="canStewardRelease" class="mt" shadow="never">
-        <template #header>行管放分（结项）</template>
+        <template #header>积分放分（结项）</template>
         <p v-if="row.suggestedScore != null" class="hint">系统建议分：{{ row.suggestedScore }}，可直接作为放分参考。</p>
-        <el-input-number v-model="finalScore" :precision="2" :step="0.5" placeholder="确认分（默认用建议分）" />
+        <el-alert
+          type="info"
+          :closable="false"
+          class="mb"
+          title="行管可对每位专家确认、调整或不认可评分；调整/不认可必须填写理由。"
+        />
+        <el-card v-for="item in expertEvalForms" :key="`steward-${item.expertId}`" class="mt" shadow="never">
+          <template #header>
+            <span>专家：{{ item.expertName || `#${item.expertId}` }}</span>
+          </template>
+          <el-form label-width="120px">
+            <el-form-item label="申请人建议分">
+              <el-input :model-value="item.applicantSuggestedScore.toFixed(2)" disabled />
+            </el-form-item>
+            <el-form-item label="审核结果">
+              <el-select v-model="item.stewardDecision">
+                <el-option label="认可" value="APPROVE" />
+                <el-option label="调整" value="ADJUST" />
+                <el-option label="不认可" value="REJECT" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="最终分">
+              <el-input-number
+                v-model="item.stewardFinalScore"
+                :precision="2"
+                :step="0.5"
+                :min="0"
+                :disabled="item.stewardDecision === 'APPROVE' || item.stewardDecision === 'REJECT'"
+              />
+            </el-form-item>
+            <el-form-item label="评分理由">
+              <el-input
+                v-model="item.stewardReason"
+                type="textarea"
+                :rows="2"
+                :placeholder="item.stewardDecision === 'APPROVE' ? '认可可选填；调整/不认可必填' : '请填写调整/不认可理由'"
+              />
+            </el-form-item>
+          </el-form>
+        </el-card>
+        <el-form-item label="确认总分" class="mt-row">
+          <el-input-number v-model="finalScore" :precision="2" :step="0.5" placeholder="自动汇总，可手动改" />
+        </el-form-item>
         <el-input v-model="releaseNote" class="mt-row" placeholder="说明（可选）" />
         <el-button type="success" class="mt-row" :loading="acting" @click="doRelease">确认放分并结项</el-button>
       </el-card>
@@ -296,8 +452,15 @@ import { useSystemSettingsStore } from '@/stores/system-settings'
 import { EngagementRequestService } from '@/api/services/engagement-request.service'
 import { ExpertService } from '@/api/services/expert.service'
 import type { ExpertDetail } from '@/api/types/expert'
-import type { EngagementRequestRow } from '@/api/types/engagement'
+import type { EngagementProgressLog, EngagementRequestRow } from '@/api/types/engagement'
 import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
+import {
+  APPLICANT_LEVELS_BY_ITEM,
+  BASE_SCORE_BY_ITEM_SCOPE,
+  CONTRIBUTION_SCOPE_BY_ITEM,
+  PROJECT_INFO_VISIBLE_CATEGORIES,
+  RESULT_SUMMARY_HIDDEN_ITEMS,
+} from './engagement-form-config'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -320,15 +483,27 @@ const revisionReason = ref('')
 const rollbackReason = ref('')
 const cancelReason = ref('')
 const evalAttachmentPaths = ref<string[]>([])
+const progressLogs = ref<EngagementProgressLog[]>([])
+const postingProgress = ref(false)
+const progressLogDraft = ref('')
+const progressDraftAttachments = ref<string[]>([])
 
 type ExpertEvalFormItem = {
   expertId: number
   expertName: string
+  contributionScope: string
+  baseScore: number
+  applicantLevel: string
+  applicantCoefficient: number
+  applicantSuggestedScore: number
   professional: number
   timeliness: number
   attitude: number
   resolved: boolean
   comment: string
+  stewardDecision: 'APPROVE' | 'ADJUST' | 'REJECT'
+  stewardFinalScore: number
+  stewardReason: string
 }
 
 const expertEvalForms = ref<ExpertEvalFormItem[]>([])
@@ -377,6 +552,89 @@ const canCancel = computed(() => {
   if (!row.value || !isApplicant.value) return false
   return !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(row.value.status)
 })
+const canViewProgressLogs = computed(() => {
+  if (!row.value) return false
+  if (canStewardRole.value) return true
+  if (isApplicant.value) return true
+  if (canExpertRole.value && ['PENDING_EXPERT_CONFIRM', 'IN_PROGRESS', 'PENDING_STEWARD_SCORE_RELEASE'].includes(row.value.status)) {
+    return true
+  }
+  return Boolean(row.value.viewerAmongAssignedExperts)
+})
+const canEditProgressLogs = computed(() => {
+  if (!row.value || row.value.status !== 'IN_PROGRESS') return false
+  if (isApplicant.value) return true
+  if (canExpertRole.value) return true
+  return Boolean(row.value.viewerAmongAssignedExperts)
+})
+const canReleaseByProgressRule = computed(() => {
+  if (!canStewardRelease.value) return false
+  return progressLogs.value.length > 0
+})
+
+const callPhaseText = computed(() => {
+  const status = row.value?.status
+  if (!status) return '未开始'
+  if (status === 'DRAFT') return '草稿'
+  if (status === 'PENDING_STEWARD_ASSIGN') return '待分派专家'
+  if (status === 'PENDING_EXPERT_CONFIRM') return '待专家确认'
+  if (status === 'IN_PROGRESS') return '执行中'
+  if (status === 'PENDING_STEWARD_SCORE_RELEASE') return '执行完成'
+  if (status === 'COMPLETED') return '已完成'
+  if (status === 'CANCELLED') return '已取消'
+  if (status === 'REJECTED') return '已驳回'
+  return status
+})
+
+const pointsPhaseText = computed(() => {
+  const status = row.value?.status
+  if (!status) return '未开始'
+  if (status === 'DRAFT' || status === 'PENDING_STEWARD_ASSIGN' || status === 'PENDING_EXPERT_CONFIRM') {
+    return '未开始'
+  }
+  if (status === 'IN_PROGRESS') return '待申请人评价'
+  if (status === 'PENDING_STEWARD_SCORE_RELEASE') return '待积分审核/放分'
+  if (status === 'COMPLETED') return '已完成'
+  if (status === 'CANCELLED' || status === 'REJECTED') return '已终止'
+  return status
+})
+
+const parsedTaskDescription = computed(() => parseStructuredTaskDescription(row.value?.taskDescription || ''))
+
+const structuredInfoGroups = computed(() => {
+  const all = parsedTaskDescription.value.map
+  const groups: Array<{ title: string; items: Array<{ label: string; value: string; required: boolean }> }> = []
+  const pickItems = (keys: string[]) =>
+    keys
+      .map((key) => ({ label: key, value: all[key], required: isFieldRequired(key, all) }))
+      .filter((item) => Boolean(item.value))
+
+  const applyInfo = pickItems(['申请类别', '积分大类', '积分项目'])
+  if (applyInfo.length) groups.push({ title: '申请信息', items: applyInfo })
+
+  const requesterInfo = pickItems(['需求人', '联系方式'])
+  if (requesterInfo.length) groups.push({ title: '需求方信息', items: requesterInfo })
+
+  const projectInfo = pickItems(['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'])
+  if (projectInfo.length) groups.push({ title: '项目基本信息', items: projectInfo })
+
+  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动主要信息', '成果提交简述'])
+  if (activityInfo.length) groups.push({ title: '活动信息', items: activityInfo })
+
+  const expertInfo = pickItems(['专家价值', '需求人数', '技术标签'])
+  if (expertInfo.length) groups.push({ title: '专家需求', items: expertInfo })
+
+  return groups
+})
+
+const fusionExtraText = computed(() => parsedTaskDescription.value.extraText)
+const currentPointsItem = computed(() => parsedTaskDescription.value.map['积分项目'] || '')
+const currentContributionScopeOptions = computed(() => {
+  return CONTRIBUTION_SCOPE_BY_ITEM[currentPointsItem.value] || []
+})
+const currentApplicantLevelOptions = computed(() => {
+  return APPLICANT_LEVELS_BY_ITEM[currentPointsItem.value] || []
+})
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
@@ -410,6 +668,129 @@ function statusText(s: string) {
   return m[s] || s
 }
 
+function parseStructuredTaskDescription(taskDescription: string): {
+  map: Record<string, string>
+  extraText: string
+} {
+  const result: Record<string, string> = {}
+  const lines = (taskDescription || '').split('\n')
+  let extraText = ''
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    const idx = trimmed.indexOf('：')
+    if (idx > 0) {
+      const key = trimmed.slice(0, idx).trim()
+      const value = trimmed.slice(idx + 1).trim()
+      if (key) result[key] = value
+    }
+  }
+  if (result['补充描述']) {
+    extraText = result['补充描述']
+  } else if (taskDescription.trim()) {
+    extraText = taskDescription.trim()
+  }
+  return { map: result, extraText }
+}
+
+function isFieldRequired(label: string, all: Record<string, string>): boolean {
+  const baseRequired = new Set([
+    '申请类别',
+    '积分大类',
+    '积分项目',
+    '需求人',
+    '联系方式',
+    '活动名称',
+    '活动主要信息',
+    '专家价值',
+  ])
+  if (baseRequired.has(label)) return true
+
+  const pointsCategory = all['积分大类'] || ''
+  const pointsItem = all['积分项目'] || ''
+  const showProjectInfo = PROJECT_INFO_VISIBLE_CATEGORIES.has(pointsCategory)
+  if (
+    showProjectInfo &&
+    ['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'].includes(label)
+  ) {
+    return true
+  }
+  if (label === '贡献范围') {
+    return (CONTRIBUTION_SCOPE_BY_ITEM[pointsItem] || []).length > 0
+  }
+  if (label === '成果提交简述') {
+    return !RESULT_SUMMARY_HIDDEN_ITEMS.has(pointsItem)
+  }
+  return false
+}
+
+function getBaseScore(pointsItem: string, contributionScope: string): number {
+  const map = BASE_SCORE_BY_ITEM_SCOPE[pointsItem] || {}
+  if (contributionScope && typeof map[contributionScope] === 'number') return map[contributionScope]
+  if (typeof map['默认'] === 'number') return map['默认']
+  return 0
+}
+
+function getApplicantCoefficient(pointsItem: string, applicantLevel: string): number {
+  const options = APPLICANT_LEVELS_BY_ITEM[pointsItem] || []
+  return options.find((item) => item.label === applicantLevel)?.coefficient ?? 1
+}
+
+function syncApplicantScore(item: ExpertEvalFormItem): void {
+  const pointsItem = currentPointsItem.value
+  item.baseScore = getBaseScore(pointsItem, item.contributionScope)
+  item.applicantCoefficient = getApplicantCoefficient(pointsItem, item.applicantLevel)
+  item.applicantSuggestedScore = Number((item.baseScore * item.applicantCoefficient).toFixed(2))
+  if (item.stewardDecision === 'APPROVE') {
+    item.stewardFinalScore = item.applicantSuggestedScore
+  }
+  if (item.stewardDecision === 'REJECT') {
+    item.stewardFinalScore = 0
+  }
+}
+
+function progressStorageKey(requestId: number): string {
+  return `engagement-progress-logs:${requestId}`
+}
+
+function progressRoleText(role: EngagementProgressLog['authorRole']): string {
+  if (role === 'APPLICANT') return '申请人'
+  if (role === 'EXPERT') return '专家'
+  if (role === 'STEWARD') return '行管'
+  return '系统'
+}
+
+function inferAuthorRole(): EngagementProgressLog['authorRole'] {
+  if (isApplicant.value) return 'APPLICANT'
+  if (canStewardRole.value) return 'STEWARD'
+  return 'EXPERT'
+}
+
+function readLocalProgressLogs(requestId: number): EngagementProgressLog[] {
+  if (typeof localStorage === 'undefined') return []
+  const raw = localStorage.getItem(progressStorageKey(requestId))
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as EngagementProgressLog[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalProgressLogs(requestId: number, logs: EngagementProgressLog[]): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(progressStorageKey(requestId), JSON.stringify(logs))
+}
+
+async function loadProgressLogs(requestId: number): Promise<void> {
+  try {
+    progressLogs.value = await EngagementRequestService.listProgressLogs(requestId)
+  } catch {
+    progressLogs.value = readLocalProgressLogs(requestId)
+  }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -429,6 +810,7 @@ async function load() {
     reassignReason.value = ''
     assignExpertIds.value = []
     initExpertEvalForms(r)
+    await loadProgressLogs(r.id)
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '加载失败')
     row.value = null
@@ -444,15 +826,31 @@ function initExpertEvalForms(r: EngagementRequestRow) {
   const names = r.assignedExpertNames?.length
     ? r.assignedExpertNames
     : (r.assignedExpertName ? [r.assignedExpertName] : [])
+  const scopeOptions = CONTRIBUTION_SCOPE_BY_ITEM[currentPointsItem.value] || []
+  const levelOptions = APPLICANT_LEVELS_BY_ITEM[currentPointsItem.value] || []
+  const defaultScope = scopeOptions[0] || ''
+  const defaultLevel = levelOptions[0]?.label || ''
 
   expertEvalForms.value = ids.map((expertId, idx) => ({
     expertId,
     expertName: names[idx] || '',
+    contributionScope: defaultScope,
+    baseScore: getBaseScore(currentPointsItem.value, defaultScope),
+    applicantLevel: defaultLevel,
+    applicantCoefficient: getApplicantCoefficient(currentPointsItem.value, defaultLevel),
+    applicantSuggestedScore: Number(
+      (getBaseScore(currentPointsItem.value, defaultScope) * getApplicantCoefficient(currentPointsItem.value, defaultLevel)).toFixed(2)
+    ),
     professional: 5,
     timeliness: 5,
     attitude: 5,
     resolved: true,
     comment: '',
+    stewardDecision: 'APPROVE',
+    stewardFinalScore: Number(
+      (getBaseScore(currentPointsItem.value, defaultScope) * getApplicantCoefficient(currentPointsItem.value, defaultLevel)).toFixed(2)
+    ),
+    stewardReason: '',
   }))
 }
 
@@ -461,6 +859,44 @@ watch(
   () => {
     void load()
   }
+)
+
+watch(
+  () => currentPointsItem.value,
+  () => {
+    for (const item of expertEvalForms.value) {
+      const scopeOptions = currentContributionScopeOptions.value
+      const levelOptions = currentApplicantLevelOptions.value
+      if (scopeOptions.length && !scopeOptions.includes(item.contributionScope)) {
+        item.contributionScope = scopeOptions[0]
+      }
+      if (levelOptions.length && !levelOptions.some((opt) => opt.label === item.applicantLevel)) {
+        item.applicantLevel = levelOptions[0]?.label || ''
+      }
+      syncApplicantScore(item)
+    }
+  }
+)
+
+watch(
+  () =>
+    expertEvalForms.value.map((item) => ({
+      scope: item.contributionScope,
+      level: item.applicantLevel,
+      decision: item.stewardDecision,
+      suggested: item.applicantSuggestedScore,
+      final: item.stewardFinalScore,
+    })),
+  () => {
+    for (const item of expertEvalForms.value) {
+      syncApplicantScore(item)
+    }
+    if (expertEvalForms.value.length) {
+      const sum = expertEvalForms.value.reduce((acc, item) => acc + Number(item.stewardFinalScore || 0), 0)
+      finalScore.value = Number(sum.toFixed(2))
+    }
+  },
+  { deep: true }
 )
 
 watch(
@@ -591,6 +1027,65 @@ async function onEvalUpload(opt: UploadRequestOptions) {
   }
 }
 
+async function onProgressUpload(opt: UploadRequestOptions) {
+  if (!row.value) {
+    opt.onError?.(new Error('no row') as never)
+    return
+  }
+  try {
+    const file = opt.file as File
+    const res = await EngagementRequestService.uploadEvaluationFile(row.value.id, file)
+    progressDraftAttachments.value.push(res.path)
+    opt.onSuccess?.({} as never)
+    ElMessage.success('过程附件已上传')
+  } catch (e: unknown) {
+    opt.onError?.(e as never)
+    ElMessage.error((e as Error)?.message || '上传失败')
+  }
+}
+
+function removeProgressAttachment(index: number): void {
+  progressDraftAttachments.value.splice(index, 1)
+}
+
+async function submitProgressLog(): Promise<void> {
+  if (!row.value || !canEditProgressLogs.value) return
+  const content = progressLogDraft.value.trim()
+  if (!content) {
+    ElMessage.warning('请填写过程记录内容')
+    return
+  }
+  postingProgress.value = true
+  try {
+    try {
+      const created = await EngagementRequestService.createProgressLog(row.value.id, {
+        content,
+        attachments: progressDraftAttachments.value.length ? [...progressDraftAttachments.value] : undefined,
+      })
+      progressLogs.value = [created, ...progressLogs.value]
+    } catch {
+      const localCreated: EngagementProgressLog = {
+        id: Date.now(),
+        requestId: row.value.id,
+        authorId: auth.userId || 0,
+        authorName: auth.username || '当前用户',
+        authorRole: inferAuthorRole(),
+        content,
+        attachments: progressDraftAttachments.value.length ? [...progressDraftAttachments.value] : [],
+        createdAt: new Date().toISOString(),
+      }
+      progressLogs.value = [localCreated, ...progressLogs.value]
+      writeLocalProgressLogs(row.value.id, progressLogs.value)
+      ElMessage.info('已保存过程记录（本地模式）')
+    }
+    progressLogDraft.value = ''
+    progressDraftAttachments.value = []
+    ElMessage.success('过程记录已发布')
+  } finally {
+    postingProgress.value = false
+  }
+}
+
 function removeAttachment(i: number) {
   evalAttachmentPaths.value.splice(i, 1)
 }
@@ -599,6 +1094,20 @@ async function doEval() {
   if (!row.value) return
   if (!expertEvalForms.value.length) {
     ElMessage.warning('当前没有可评价的专家')
+    return
+  }
+  const missingScope = currentContributionScopeOptions.value.length
+    ? expertEvalForms.value.some((item) => !item.contributionScope)
+    : false
+  if (missingScope) {
+    ElMessage.warning('请为每位专家选择贡献范围')
+    return
+  }
+  const missingLevel = currentApplicantLevelOptions.value.length
+    ? expertEvalForms.value.some((item) => !item.applicantLevel)
+    : false
+  if (missingLevel) {
+    ElMessage.warning('请为每位专家选择申请人评分等级')
     return
   }
   const missingComment = expertEvalForms.value.some((item) => !item.comment.trim())
@@ -618,7 +1127,10 @@ async function doEval() {
   )
   const allResolved = expertEvalForms.value.every((item) => item.resolved)
   const mergedComment = expertEvalForms.value
-    .map((item) => `${item.expertName || `专家#${item.expertId}`}: ${item.comment.trim()}`)
+    .map(
+      (item) =>
+        `${item.expertName || `专家#${item.expertId}`}: 范围=${item.contributionScope || '—'}，等级=${item.applicantLevel || '—'}，建议分=${item.applicantSuggestedScore.toFixed(2)}，评语=${item.comment.trim()}`
+    )
     .join('\n')
 
   acting.value = true
@@ -636,7 +1148,16 @@ async function doEval() {
         timeliness: item.timeliness,
         attitude: item.attitude,
         resolved: item.resolved,
-        comment: item.comment.trim() || undefined,
+        comment:
+          JSON.stringify({
+            text: item.comment.trim() || undefined,
+            pointsItem: currentPointsItem.value,
+            contributionScope: item.contributionScope || undefined,
+            baseScore: item.baseScore,
+            applicantLevel: item.applicantLevel || undefined,
+            applicantCoefficient: item.applicantCoefficient,
+            applicantSuggestedScore: item.applicantSuggestedScore,
+          }) || undefined,
       })),
     })
     row.value = r
@@ -650,12 +1171,41 @@ async function doEval() {
 
 async function doRelease() {
   if (!row.value) return
+  if (!canReleaseByProgressRule.value) {
+    ElMessage.warning('请先补充至少 1 条执行协同记录，再进行积分放分')
+    return
+  }
+  const missingStewardReason = expertEvalForms.value.some(
+    (item) => (item.stewardDecision === 'ADJUST' || item.stewardDecision === 'REJECT') && !item.stewardReason.trim()
+  )
+  if (missingStewardReason) {
+    ElMessage.warning('调整或不认可时请填写评分理由')
+    return
+  }
+  const computedFinalScore = Number(
+    expertEvalForms.value.reduce((acc, item) => acc + Number(item.stewardFinalScore || 0), 0).toFixed(2)
+  )
+  if (finalScore.value == null || Number.isNaN(Number(finalScore.value))) {
+    finalScore.value = computedFinalScore
+  }
+  const structuredReleaseNote = JSON.stringify({
+    pointsItem: currentPointsItem.value,
+    items: expertEvalForms.value.map((item) => ({
+      expertId: item.expertId,
+      decision: item.stewardDecision,
+      suggestedScore: item.applicantSuggestedScore,
+      finalScore: item.stewardFinalScore,
+      reason: item.stewardReason.trim() || undefined,
+    })),
+  })
   acting.value = true
   try {
     const r = await EngagementRequestService.releaseScore(
       row.value.id,
       finalScore.value,
-      releaseNote.value || undefined
+      releaseNote.value
+        ? `${releaseNote.value}\n${structuredReleaseNote}`
+        : structuredReleaseNote
     )
     row.value = r
     ElMessage.success('已结项')
@@ -760,7 +1310,9 @@ async function downloadAttachment(path: string) {
 <style scoped>
 .page {
   padding: 16px;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 .head {
   display: flex;
@@ -773,6 +1325,12 @@ async function downloadAttachment(path: string) {
 }
 .mb {
   margin-bottom: 12px;
+}
+.phase-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 .mt {
   margin-top: 16px;
@@ -788,5 +1346,44 @@ async function downloadAttachment(path: string) {
 .tag {
   margin-right: 8px;
   margin-bottom: 4px;
+}
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.progress-item {
+  border: 1px solid #ebeef5;
+}
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #909399;
+  font-size: 12px;
+}
+.progress-author {
+  color: #303133;
+  font-weight: 600;
+}
+.progress-content {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.structured-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.structured-group {
+  border: 1px solid #ebeef5;
+}
+
+:deep(.el-descriptions__cell) {
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 </style>

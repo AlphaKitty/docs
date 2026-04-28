@@ -24,6 +24,22 @@ export interface ReassignmentLogEntry {
   at?: string | null
 }
 
+export interface EngagementProgressLog {
+  id: number
+  requestId: number
+  authorId: number
+  authorName: string
+  authorRole: 'APPLICANT' | 'EXPERT' | 'STEWARD' | 'SYSTEM'
+  content: string
+  attachments?: string[] | null
+  createdAt: string
+}
+
+export interface CreateEngagementProgressLogPayload {
+  content: string
+  attachments?: string[]
+}
+
 export interface EngagementRequestRow {
   id: number
   referenceCode?: string | null
