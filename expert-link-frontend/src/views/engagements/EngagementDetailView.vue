@@ -71,7 +71,7 @@
         <el-descriptions-item label="类型">{{ taskTypeLabel(row.taskType) }}</el-descriptions-item>
         <el-descriptions-item label="开始">{{ formatDateTimeDisplay(row.startAt) }}</el-descriptions-item>
         <el-descriptions-item label="结束">{{ formatDateTimeDisplay(row.endAt) }}</el-descriptions-item>
-        <el-descriptions-item label="任务描述" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
+        <el-descriptions-item label="任务描述（原文）" :span="2">{{ row.taskDescription || '—' }}</el-descriptions-item>
         <el-descriptions-item label="指定专家">
           {{
             row.designatedExpertNames?.length
@@ -95,17 +95,29 @@
         </el-descriptions-item>
       </el-descriptions>
 
-      <el-card v-if="fusionSummary.length || fusionExtraText" class="mt" shadow="never">
-        <template #header>融合申请信息（专家调用 + 积分自提）</template>
-        <el-descriptions :column="2" border>
-          <el-descriptions-item
-            v-for="item in fusionSummary"
-            :key="item.label"
-            :label="item.label"
+      <el-card v-if="structuredInfoGroups.length || fusionExtraText" class="mt" shadow="never">
+        <template #header>申请表详情（融合字段）</template>
+        <div class="structured-groups">
+          <el-card
+            v-for="group in structuredInfoGroups"
+            :key="group.title"
+            shadow="never"
+            class="structured-group"
           >
-            {{ item.value }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="fusionExtraText" label="补充描述" :span="2">
+            <template #header>{{ group.title }}</template>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item
+                v-for="item in group.items"
+                :key="`${group.title}-${item.label}`"
+                :label="item.required ? `${item.label}（必填）` : item.label"
+              >
+                {{ item.value }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </el-card>
+        </div>
+        <el-descriptions v-if="fusionExtraText" :column="1" border class="mt-row">
+          <el-descriptions-item label="补充描述">
             {{ fusionExtraText }}
           </el-descriptions-item>
         </el-descriptions>
@@ -371,6 +383,11 @@ import { ExpertService } from '@/api/services/expert.service'
 import type { ExpertDetail } from '@/api/types/expert'
 import type { EngagementProgressLog, EngagementRequestRow } from '@/api/types/engagement'
 import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
+import {
+  CONTRIBUTION_SCOPE_BY_ITEM,
+  PROJECT_INFO_VISIBLE_CATEGORIES,
+  RESULT_SUMMARY_HIDDEN_ITEMS,
+} from './engagement-form-config'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -501,38 +518,35 @@ const pointsPhaseText = computed(() => {
   return status
 })
 
-const fusionSummary = computed(() => {
-  const parsed = parseStructuredTaskDescription(row.value?.taskDescription || '')
-  const allItems: Array<{ label: string; value: string }> = []
-  const keysInOrder = [
-    '申请类别',
-    '积分大类',
-    '积分项目',
-    '需求人',
-    '联系方式',
-    '项目',
-    '项目部门',
-    '产品线',
-    '是否KDW',
-    '活动名称',
-    '活动主要信息',
-    '成果提交简述',
-    '专家价值',
-    '技术标签',
-  ]
-  for (const key of keysInOrder) {
-    const value = parsed.map[key]
-    if (value) {
-      allItems.push({ label: key, value })
-    }
-  }
-  return allItems
+const parsedTaskDescription = computed(() => parseStructuredTaskDescription(row.value?.taskDescription || ''))
+
+const structuredInfoGroups = computed(() => {
+  const all = parsedTaskDescription.value.map
+  const groups: Array<{ title: string; items: Array<{ label: string; value: string; required: boolean }> }> = []
+  const pickItems = (keys: string[]) =>
+    keys
+      .map((key) => ({ label: key, value: all[key], required: isFieldRequired(key, all) }))
+      .filter((item) => Boolean(item.value))
+
+  const applyInfo = pickItems(['申请类别', '积分大类', '积分项目'])
+  if (applyInfo.length) groups.push({ title: '申请信息', items: applyInfo })
+
+  const requesterInfo = pickItems(['需求人', '联系方式'])
+  if (requesterInfo.length) groups.push({ title: '需求方信息', items: requesterInfo })
+
+  const projectInfo = pickItems(['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'])
+  if (projectInfo.length) groups.push({ title: '项目基本信息', items: projectInfo })
+
+  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动主要信息', '成果提交简述'])
+  if (activityInfo.length) groups.push({ title: '活动信息', items: activityInfo })
+
+  const expertInfo = pickItems(['专家价值', '需求人数', '技术标签'])
+  if (expertInfo.length) groups.push({ title: '专家需求', items: expertInfo })
+
+  return groups
 })
 
-const fusionExtraText = computed(() => {
-  const parsed = parseStructuredTaskDescription(row.value?.taskDescription || '')
-  return parsed.extraText
-})
+const fusionExtraText = computed(() => parsedTaskDescription.value.extraText)
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
@@ -589,6 +603,37 @@ function parseStructuredTaskDescription(taskDescription: string): {
     extraText = taskDescription.trim()
   }
   return { map: result, extraText }
+}
+
+function isFieldRequired(label: string, all: Record<string, string>): boolean {
+  const baseRequired = new Set([
+    '申请类别',
+    '积分大类',
+    '积分项目',
+    '需求人',
+    '联系方式',
+    '活动名称',
+    '活动主要信息',
+    '专家价值',
+  ])
+  if (baseRequired.has(label)) return true
+
+  const pointsCategory = all['积分大类'] || ''
+  const pointsItem = all['积分项目'] || ''
+  const showProjectInfo = PROJECT_INFO_VISIBLE_CATEGORIES.has(pointsCategory)
+  if (
+    showProjectInfo &&
+    ['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'].includes(label)
+  ) {
+    return true
+  }
+  if (label === '贡献范围') {
+    return (CONTRIBUTION_SCOPE_BY_ITEM[pointsItem] || []).length > 0
+  }
+  if (label === '成果提交简述') {
+    return !RESULT_SUMMARY_HIDDEN_ITEMS.has(pointsItem)
+  }
+  return false
 }
 
 function progressStorageKey(requestId: number): string {
@@ -1109,6 +1154,14 @@ async function downloadAttachment(path: string) {
   margin-top: 8px;
   white-space: pre-wrap;
   word-break: break-word;
+}
+.structured-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.structured-group {
+  border: 1px solid #ebeef5;
 }
 
 :deep(.el-descriptions__cell) {
