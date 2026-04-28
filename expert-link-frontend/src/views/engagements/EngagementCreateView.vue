@@ -19,17 +19,20 @@
       <el-card shadow="never" class="section">
         <template #header>申请信息</template>
         <div class="grid four">
-          <el-form-item label="申请类别">
+          <el-form-item label="申请类别" required>
             <el-select v-model="extraForm.applyCategory">
-              <el-option label="专家调用" value="专家调用" />
-              <el-option label="专家评审" value="专家评审" />
+              <el-option v-for="item in applyCategoryOptions" :key="item" :label="item" :value="item" />
             </el-select>
           </el-form-item>
-          <el-form-item label="积分大类">
-            <el-input v-model="extraForm.pointsCategory" placeholder="例如：评估评审" />
+          <el-form-item label="积分大类" required>
+            <el-select v-model="extraForm.pointsCategory">
+              <el-option v-for="item in pointsCategoryOptions" :key="item" :label="item" :value="item" />
+            </el-select>
           </el-form-item>
-          <el-form-item label="积分项目">
-            <el-input v-model="extraForm.pointsItem" placeholder="例如：技术评审" />
+          <el-form-item label="积分项目" required>
+            <el-select v-model="extraForm.pointsItem" filterable>
+              <el-option v-for="item in pointsItemOptions" :key="item" :label="item" :value="item" />
+            </el-select>
           </el-form-item>
           <el-form-item label="调用模式" required>
             <el-radio-group v-model="form.mode">
@@ -43,16 +46,16 @@
       <el-card shadow="never" class="section">
         <template #header>需求方信息</template>
         <div class="grid four">
-          <el-form-item label="需求人">
+          <el-form-item label="需求人" required>
             <el-input v-model="extraForm.requester" placeholder="输入需求人" />
           </el-form-item>
-          <el-form-item label="需求部门">
+          <el-form-item label="需求部门" required>
             <el-input v-model="extraForm.requestDept" placeholder="输入部门" />
           </el-form-item>
-          <el-form-item label="需求人职位">
+          <el-form-item label="需求人职位" required>
             <el-input v-model="extraForm.requestPosition" placeholder="输入职位" />
           </el-form-item>
-          <el-form-item label="联系方式">
+          <el-form-item label="联系方式" required>
             <el-input v-model="extraForm.contact" placeholder="手机/邮箱" />
           </el-form-item>
         </div>
@@ -61,31 +64,31 @@
       <el-card shadow="never" class="section">
         <template #header>项目信息</template>
         <div class="grid four">
-          <el-form-item label="项目部门">
+          <el-form-item v-if="showProjectInfoFields" label="项目部门" :required="showProjectInfoFields">
             <el-input v-model="extraForm.projectDept" placeholder="输入项目部门" />
           </el-form-item>
-          <el-form-item label="项目名称">
+          <el-form-item v-if="showProjectInfoFields" label="项目名称" :required="showProjectInfoFields">
             <el-input v-model="extraForm.projectName" placeholder="输入项目名称" />
           </el-form-item>
-          <el-form-item label="项目级别">
+          <el-form-item v-if="showProjectInfoFields" label="项目级别" :required="showProjectInfoFields">
             <el-input v-model="extraForm.projectLevel" placeholder="如 S/A/B" />
           </el-form-item>
-          <el-form-item label="客户代码">
+          <el-form-item v-if="showProjectInfoFields" label="客户代码" :required="showProjectInfoFields">
             <el-input v-model="extraForm.customerCode" placeholder="输入客户代码" />
           </el-form-item>
-          <el-form-item label="产品线">
+          <el-form-item v-if="showProjectInfoFields" label="产品线" :required="showProjectInfoFields">
             <el-input v-model="extraForm.productLine" placeholder="输入产品线" />
           </el-form-item>
-          <el-form-item label="当前阶段">
+          <el-form-item v-if="showProjectInfoFields" label="当前阶段" :required="showProjectInfoFields">
             <el-input v-model="extraForm.currentStage" placeholder="如 EVT/DVT" />
           </el-form-item>
-          <el-form-item label="是否KDW">
+          <el-form-item v-if="showProjectInfoFields" label="是否KDW" :required="showProjectInfoFields">
             <el-select v-model="extraForm.isKdw">
               <el-option label="是" value="是" />
               <el-option label="否" value="否" />
             </el-select>
           </el-form-item>
-          <el-form-item label="是否迭代产品">
+          <el-form-item v-if="showProjectInfoFields" label="是否迭代产品" :required="showProjectInfoFields">
             <el-select v-model="extraForm.isIterative">
               <el-option label="是" value="是" />
               <el-option label="否" value="否" />
@@ -110,8 +113,15 @@
           <el-form-item label="活动地点">
             <el-input v-model="extraForm.activityLocation" placeholder="输入地点" />
           </el-form-item>
-          <el-form-item label="贡献范围">
-            <el-input v-model="extraForm.contributionScope" placeholder="如 跨BG" />
+          <el-form-item v-if="showContributionScope" label="贡献范围" :required="showContributionScope">
+            <el-select v-model="extraForm.contributionScope">
+              <el-option
+                v-for="item in contributionScopeOptions"
+                :key="item"
+                :label="item"
+                :value="item"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="开始时间" required>
             <el-date-picker
@@ -132,16 +142,21 @@
             />
           </el-form-item>
         </div>
-        <el-form-item label="活动主要信息">
+        <el-form-item label="活动主要信息" required>
           <el-input
             v-model="extraForm.activityInfo"
             type="textarea"
             :rows="4"
-            placeholder="问题/现象、可行方案、无法突破点等"
+            :placeholder="activityInfoPlaceholder"
           />
         </el-form-item>
-        <el-form-item label="成果提交简述">
-          <el-input v-model="extraForm.resultSummary" type="textarea" :rows="3" placeholder="成果内容简述" />
+        <el-form-item v-if="showResultSummary" label="成果提交简述" :required="showResultSummary">
+          <el-input
+            v-model="extraForm.resultSummary"
+            type="textarea"
+            :rows="3"
+            :placeholder="resultSummaryPlaceholder"
+          />
         </el-form-item>
       </el-card>
 
@@ -190,7 +205,7 @@
           </el-select>
         </el-form-item>
         <div class="grid four">
-          <el-form-item label="专家价值">
+          <el-form-item label="专家价值" required>
             <el-input v-model="extraForm.expertValue" placeholder="输入价值评估" />
           </el-form-item>
           <el-form-item label="需求人数">
@@ -244,6 +259,16 @@ import { EngagementRequestService } from '@/api/services/engagement-request.serv
 import { ExpertService } from '@/api/services/expert.service'
 import type { EngagementMode, EngagementTaskType } from '@/api/types/engagement'
 import type { ExpertDetail } from '@/api/types/expert'
+import {
+  ACTIVITY_INFO_PLACEHOLDER_BY_CATEGORY,
+  APPLY_CATEGORY_OPTIONS,
+  CONTRIBUTION_SCOPE_BY_ITEM,
+  POINTS_CATEGORY_BY_APPLY_CATEGORY,
+  POINTS_ITEM_BY_CATEGORY,
+  PROJECT_INFO_VISIBLE_CATEGORIES,
+  RESULT_SUMMARY_HIDDEN_ITEMS,
+  RESULT_SUMMARY_PLACEHOLDER_BY_ITEM,
+} from './engagement-form-config'
 
 type DomainOption = { id: number; name: string; parentId?: number; hasSteward: boolean }
 
@@ -290,6 +315,20 @@ const extraForm = reactive({
   requiredCount: 2,
   techTags: '',
 })
+
+const applyCategoryOptions = APPLY_CATEGORY_OPTIONS
+const pointsCategoryOptions = computed(() => POINTS_CATEGORY_BY_APPLY_CATEGORY[extraForm.applyCategory] || [])
+const pointsItemOptions = computed(() => POINTS_ITEM_BY_CATEGORY[extraForm.pointsCategory] || [])
+const contributionScopeOptions = computed(() => CONTRIBUTION_SCOPE_BY_ITEM[extraForm.pointsItem] || [])
+const showContributionScope = computed(() => contributionScopeOptions.value.length > 0)
+const showProjectInfoFields = computed(() => PROJECT_INFO_VISIBLE_CATEGORIES.has(extraForm.pointsCategory))
+const showResultSummary = computed(() => !RESULT_SUMMARY_HIDDEN_ITEMS.has(extraForm.pointsItem))
+const activityInfoPlaceholder = computed(
+  () => ACTIVITY_INFO_PLACEHOLDER_BY_CATEGORY[extraForm.pointsCategory] || '请填写活动背景、目标、过程与结果'
+)
+const resultSummaryPlaceholder = computed(
+  () => RESULT_SUMMARY_PLACEHOLDER_BY_ITEM[extraForm.pointsItem] || '请填写成果提交简述'
+)
 
 const parentDomains = computed(() => allDomains.value.filter((d) => d.parentId == null))
 
@@ -404,6 +443,39 @@ watch(testMode, (enabled) => {
   fillTestData()
 })
 
+watch(
+  () => extraForm.applyCategory,
+  (next) => {
+    const categories = POINTS_CATEGORY_BY_APPLY_CATEGORY[next] || []
+    if (!categories.includes(extraForm.pointsCategory)) {
+      extraForm.pointsCategory = categories[0] || ''
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => extraForm.pointsCategory,
+  (next) => {
+    const items = POINTS_ITEM_BY_CATEGORY[next] || []
+    if (!items.includes(extraForm.pointsItem)) {
+      extraForm.pointsItem = items[0] || ''
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => extraForm.pointsItem,
+  (next) => {
+    const scopes = CONTRIBUTION_SCOPE_BY_ITEM[next] || []
+    if (!scopes.includes(extraForm.contributionScope)) {
+      extraForm.contributionScope = scopes[0] || ''
+    }
+  },
+  { immediate: true }
+)
+
 function fillTestData() {
   const firstEnabledParent = parentDomains.value.find((d) => d.hasSteward)
   if (firstEnabledParent) {
@@ -463,9 +535,51 @@ function buildTaskDescription(): string {
   return lines.join('\n')
 }
 
+function validateRequiredFields(): string | null {
+  if (!extraForm.applyCategory) return '请先选择申请类别'
+  if (!extraForm.pointsCategory) return '请先选择积分大类'
+  if (!extraForm.pointsItem) return '请先选择积分项目'
+  if (!extraForm.requester || !extraForm.requestDept || !extraForm.requestPosition || !extraForm.contact) {
+    return '请完整填写需求方信息'
+  }
+  if (showProjectInfoFields.value) {
+    const requiredProjectValues = [
+      extraForm.projectDept,
+      extraForm.projectName,
+      extraForm.projectLevel,
+      extraForm.customerCode,
+      extraForm.productLine,
+      extraForm.currentStage,
+      extraForm.isKdw,
+      extraForm.isIterative,
+    ]
+    if (requiredProjectValues.some((item) => !String(item || '').trim())) {
+      return '当前积分大类下，项目信息为必填'
+    }
+  }
+  if (!extraForm.activityName || !extraForm.activityLocation || !extraForm.activityInfo) {
+    return '请完整填写活动信息'
+  }
+  if (showContributionScope.value && !extraForm.contributionScope) {
+    return '请填写贡献范围'
+  }
+  if (showResultSummary.value && !extraForm.resultSummary.trim()) {
+    return '请填写成果提交简述'
+  }
+  if (!extraForm.expertValue.trim()) {
+    return '请填写专家价值'
+  }
+  return null
+}
+
 async function onSave() {
   if (!effectiveDomainIds.value.length || !form.startAt) {
     ElMessage.warning('请填写领域与开始时间')
+    return
+  }
+  const validationError = validateRequiredFields()
+  if (validationError) {
+    ElMessage.warning(validationError)
     return
   }
   saving.value = true
