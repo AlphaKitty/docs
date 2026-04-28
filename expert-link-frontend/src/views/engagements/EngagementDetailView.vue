@@ -22,6 +22,10 @@
       </el-steps>
 
       <el-tag class="mb">{{ statusText(row.status) }}</el-tag>
+      <div class="phase-row">
+        <el-tag type="primary">调用阶段：{{ callPhaseText }}</el-tag>
+        <el-tag type="success">积分阶段：{{ pointsPhaseText }}</el-tag>
+      </div>
 
       <el-alert
         v-if="row.evaluationRevisionNote"
@@ -90,6 +94,75 @@
           {{ row.stewardFinalScore }}
         </el-descriptions-item>
       </el-descriptions>
+
+      <el-card v-if="fusionSummary.length || fusionExtraText" class="mt" shadow="never">
+        <template #header>融合申请信息（专家调用 + 积分自提）</template>
+        <el-descriptions :column="2" border>
+          <el-descriptions-item
+            v-for="item in fusionSummary"
+            :key="item.label"
+            :label="item.label"
+          >
+            {{ item.value }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="fusionExtraText" label="补充描述" :span="2">
+            {{ fusionExtraText }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-card v-if="canViewProgressLogs" class="mt" shadow="never">
+        <template #header>执行协同记录（过程证据）</template>
+        <p class="hint">执行阶段由申请人和被指派专家持续补充过程材料，作为积分放分依据之一。</p>
+        <template v-if="canEditProgressLogs">
+          <el-input
+            v-model="progressLogDraft"
+            type="textarea"
+            :rows="3"
+            placeholder="填写本次进展、问题、方案、结论等"
+          />
+          <el-upload :http-request="onProgressUpload" :limit="6" :show-file-list="true" class="mt-row">
+            <el-button type="primary" plain>上传过程附件</el-button>
+          </el-upload>
+          <div v-if="progressDraftAttachments.length" class="mt-row">
+            <el-tag
+              v-for="(p, i) in progressDraftAttachments"
+              :key="`${p}-${i}`"
+              closable
+              class="tag"
+              @close="removeProgressAttachment(i)"
+            >
+              {{ p }}
+            </el-tag>
+          </div>
+          <div class="mt-row">
+            <el-button type="primary" :loading="postingProgress" @click="submitProgressLog">发布过程记录</el-button>
+          </div>
+        </template>
+        <el-empty v-if="!progressLogs.length" description="暂无过程记录" />
+        <div v-else class="progress-list">
+          <el-card v-for="item in progressLogs" :key="item.id" shadow="hover" class="progress-item">
+            <div class="progress-meta">
+              <span class="progress-author">{{ item.authorName }}（{{ progressRoleText(item.authorRole) }}）</span>
+              <span>{{ formatDateTimeDisplay(item.createdAt) }}</span>
+            </div>
+            <div class="progress-content">{{ item.content }}</div>
+            <div v-if="item.attachments?.length" class="mt-row">
+              <el-space wrap>
+                <el-button
+                  v-for="(path, idx) in item.attachments"
+                  :key="`${item.id}-${idx}`"
+                  link
+                  type="primary"
+                  @click="downloadAttachment(path)"
+                >
+                  附件 {{ idx + 1 }}
+                </el-button>
+              </el-space>
+            </div>
+          </el-card>
+        </div>
+      </el-card>
 
       <el-card v-if="row.reassignmentLog?.length" class="mt" shadow="never">
         <template #header>改派记录</template>
@@ -202,7 +275,7 @@
       </el-card>
 
       <el-card v-if="isApplicant && row.status === 'IN_PROGRESS'" class="mt" shadow="never">
-        <template #header>任务结束评价</template>
+        <template #header>任务结束评价（触发积分审核）</template>
         <el-form label-width="100px">
           <el-alert
             type="info"
@@ -254,7 +327,7 @@
       </el-card>
 
       <el-card v-if="canStewardRelease" class="mt" shadow="never">
-        <template #header>行管放分（结项）</template>
+        <template #header>积分放分（结项）</template>
         <p v-if="row.suggestedScore != null" class="hint">系统建议分：{{ row.suggestedScore }}，可直接作为放分参考。</p>
         <el-input-number v-model="finalScore" :precision="2" :step="0.5" placeholder="确认分（默认用建议分）" />
         <el-input v-model="releaseNote" class="mt-row" placeholder="说明（可选）" />
@@ -296,7 +369,7 @@ import { useSystemSettingsStore } from '@/stores/system-settings'
 import { EngagementRequestService } from '@/api/services/engagement-request.service'
 import { ExpertService } from '@/api/services/expert.service'
 import type { ExpertDetail } from '@/api/types/expert'
-import type { EngagementRequestRow } from '@/api/types/engagement'
+import type { EngagementProgressLog, EngagementRequestRow } from '@/api/types/engagement'
 import { formatDateTimeDisplay, taskTypeLabel } from '@/utils/display-format'
 
 const route = useRoute()
@@ -320,6 +393,10 @@ const revisionReason = ref('')
 const rollbackReason = ref('')
 const cancelReason = ref('')
 const evalAttachmentPaths = ref<string[]>([])
+const progressLogs = ref<EngagementProgressLog[]>([])
+const postingProgress = ref(false)
+const progressLogDraft = ref('')
+const progressDraftAttachments = ref<string[]>([])
 
 type ExpertEvalFormItem = {
   expertId: number
@@ -377,6 +454,85 @@ const canCancel = computed(() => {
   if (!row.value || !isApplicant.value) return false
   return !['COMPLETED', 'REJECTED', 'CANCELLED'].includes(row.value.status)
 })
+const canViewProgressLogs = computed(() => {
+  if (!row.value) return false
+  if (canStewardRole.value) return true
+  if (isApplicant.value) return true
+  if (canExpertRole.value && ['PENDING_EXPERT_CONFIRM', 'IN_PROGRESS', 'PENDING_STEWARD_SCORE_RELEASE'].includes(row.value.status)) {
+    return true
+  }
+  return Boolean(row.value.viewerAmongAssignedExperts)
+})
+const canEditProgressLogs = computed(() => {
+  if (!row.value || row.value.status !== 'IN_PROGRESS') return false
+  if (isApplicant.value) return true
+  if (canExpertRole.value) return true
+  return Boolean(row.value.viewerAmongAssignedExperts)
+})
+const canReleaseByProgressRule = computed(() => {
+  if (!canStewardRelease.value) return false
+  return progressLogs.value.length > 0
+})
+
+const callPhaseText = computed(() => {
+  const status = row.value?.status
+  if (!status) return '未开始'
+  if (status === 'DRAFT') return '草稿'
+  if (status === 'PENDING_STEWARD_ASSIGN') return '待分派专家'
+  if (status === 'PENDING_EXPERT_CONFIRM') return '待专家确认'
+  if (status === 'IN_PROGRESS') return '执行中'
+  if (status === 'PENDING_STEWARD_SCORE_RELEASE') return '执行完成'
+  if (status === 'COMPLETED') return '已完成'
+  if (status === 'CANCELLED') return '已取消'
+  if (status === 'REJECTED') return '已驳回'
+  return status
+})
+
+const pointsPhaseText = computed(() => {
+  const status = row.value?.status
+  if (!status) return '未开始'
+  if (status === 'DRAFT' || status === 'PENDING_STEWARD_ASSIGN' || status === 'PENDING_EXPERT_CONFIRM') {
+    return '未开始'
+  }
+  if (status === 'IN_PROGRESS') return '待申请人评价'
+  if (status === 'PENDING_STEWARD_SCORE_RELEASE') return '待积分审核/放分'
+  if (status === 'COMPLETED') return '已完成'
+  if (status === 'CANCELLED' || status === 'REJECTED') return '已终止'
+  return status
+})
+
+const fusionSummary = computed(() => {
+  const parsed = parseStructuredTaskDescription(row.value?.taskDescription || '')
+  const allItems: Array<{ label: string; value: string }> = []
+  const keysInOrder = [
+    '申请类别',
+    '积分大类',
+    '积分项目',
+    '需求人',
+    '联系方式',
+    '项目',
+    '项目部门',
+    '产品线',
+    '是否KDW',
+    '活动名称',
+    '活动主要信息',
+    '成果提交简述',
+    '专家价值',
+    '技术标签',
+  ]
+  for (const key of keysInOrder) {
+    const value = parsed.map[key]
+    if (value) {
+      allItems.push({ label: key, value })
+    }
+  }
+  return allItems
+})
+
+const fusionExtraText = computed(() => {
+  const parsed = parseStructuredTaskDescription(row.value?.taskDescription || '')
+  return parsed.extraText
+})
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
@@ -410,6 +566,73 @@ function statusText(s: string) {
   return m[s] || s
 }
 
+function parseStructuredTaskDescription(taskDescription: string): {
+  map: Record<string, string>
+  extraText: string
+} {
+  const result: Record<string, string> = {}
+  const lines = (taskDescription || '').split('\n')
+  let extraText = ''
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    const idx = trimmed.indexOf('：')
+    if (idx > 0) {
+      const key = trimmed.slice(0, idx).trim()
+      const value = trimmed.slice(idx + 1).trim()
+      if (key) result[key] = value
+    }
+  }
+  if (result['补充描述']) {
+    extraText = result['补充描述']
+  } else if (taskDescription.trim()) {
+    extraText = taskDescription.trim()
+  }
+  return { map: result, extraText }
+}
+
+function progressStorageKey(requestId: number): string {
+  return `engagement-progress-logs:${requestId}`
+}
+
+function progressRoleText(role: EngagementProgressLog['authorRole']): string {
+  if (role === 'APPLICANT') return '申请人'
+  if (role === 'EXPERT') return '专家'
+  if (role === 'STEWARD') return '行管'
+  return '系统'
+}
+
+function inferAuthorRole(): EngagementProgressLog['authorRole'] {
+  if (isApplicant.value) return 'APPLICANT'
+  if (canStewardRole.value) return 'STEWARD'
+  return 'EXPERT'
+}
+
+function readLocalProgressLogs(requestId: number): EngagementProgressLog[] {
+  if (typeof localStorage === 'undefined') return []
+  const raw = localStorage.getItem(progressStorageKey(requestId))
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw) as EngagementProgressLog[]
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function writeLocalProgressLogs(requestId: number, logs: EngagementProgressLog[]): void {
+  if (typeof localStorage === 'undefined') return
+  localStorage.setItem(progressStorageKey(requestId), JSON.stringify(logs))
+}
+
+async function loadProgressLogs(requestId: number): Promise<void> {
+  try {
+    progressLogs.value = await EngagementRequestService.listProgressLogs(requestId)
+  } catch {
+    progressLogs.value = readLocalProgressLogs(requestId)
+  }
+}
+
 async function load() {
   loading.value = true
   try {
@@ -429,6 +652,7 @@ async function load() {
     reassignReason.value = ''
     assignExpertIds.value = []
     initExpertEvalForms(r)
+    await loadProgressLogs(r.id)
   } catch (e: unknown) {
     ElMessage.error((e as Error)?.message || '加载失败')
     row.value = null
@@ -591,6 +815,65 @@ async function onEvalUpload(opt: UploadRequestOptions) {
   }
 }
 
+async function onProgressUpload(opt: UploadRequestOptions) {
+  if (!row.value) {
+    opt.onError?.(new Error('no row') as never)
+    return
+  }
+  try {
+    const file = opt.file as File
+    const res = await EngagementRequestService.uploadEvaluationFile(row.value.id, file)
+    progressDraftAttachments.value.push(res.path)
+    opt.onSuccess?.({} as never)
+    ElMessage.success('过程附件已上传')
+  } catch (e: unknown) {
+    opt.onError?.(e as never)
+    ElMessage.error((e as Error)?.message || '上传失败')
+  }
+}
+
+function removeProgressAttachment(index: number): void {
+  progressDraftAttachments.value.splice(index, 1)
+}
+
+async function submitProgressLog(): Promise<void> {
+  if (!row.value || !canEditProgressLogs.value) return
+  const content = progressLogDraft.value.trim()
+  if (!content) {
+    ElMessage.warning('请填写过程记录内容')
+    return
+  }
+  postingProgress.value = true
+  try {
+    try {
+      const created = await EngagementRequestService.createProgressLog(row.value.id, {
+        content,
+        attachments: progressDraftAttachments.value.length ? [...progressDraftAttachments.value] : undefined,
+      })
+      progressLogs.value = [created, ...progressLogs.value]
+    } catch {
+      const localCreated: EngagementProgressLog = {
+        id: Date.now(),
+        requestId: row.value.id,
+        authorId: auth.userId || 0,
+        authorName: auth.username || '当前用户',
+        authorRole: inferAuthorRole(),
+        content,
+        attachments: progressDraftAttachments.value.length ? [...progressDraftAttachments.value] : [],
+        createdAt: new Date().toISOString(),
+      }
+      progressLogs.value = [localCreated, ...progressLogs.value]
+      writeLocalProgressLogs(row.value.id, progressLogs.value)
+      ElMessage.info('已保存过程记录（本地模式）')
+    }
+    progressLogDraft.value = ''
+    progressDraftAttachments.value = []
+    ElMessage.success('过程记录已发布')
+  } finally {
+    postingProgress.value = false
+  }
+}
+
 function removeAttachment(i: number) {
   evalAttachmentPaths.value.splice(i, 1)
 }
@@ -650,6 +933,10 @@ async function doEval() {
 
 async function doRelease() {
   if (!row.value) return
+  if (!canReleaseByProgressRule.value) {
+    ElMessage.warning('请先补充至少 1 条执行协同记录，再进行积分放分')
+    return
+  }
   acting.value = true
   try {
     const r = await EngagementRequestService.releaseScore(
@@ -760,7 +1047,9 @@ async function downloadAttachment(path: string) {
 <style scoped>
 .page {
   padding: 16px;
-  max-width: 900px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 .head {
   display: flex;
@@ -773,6 +1062,12 @@ async function downloadAttachment(path: string) {
 }
 .mb {
   margin-bottom: 12px;
+}
+.phase-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 .mt {
   margin-top: 16px;
@@ -788,5 +1083,36 @@ async function downloadAttachment(path: string) {
 .tag {
   margin-right: 8px;
   margin-bottom: 4px;
+}
+.progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+.progress-item {
+  border: 1px solid #ebeef5;
+}
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #909399;
+  font-size: 12px;
+}
+.progress-author {
+  color: #303133;
+  font-weight: 600;
+}
+.progress-content {
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+:deep(.el-descriptions__cell) {
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 </style>

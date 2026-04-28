@@ -1,7 +1,9 @@
 import { apiClient, handleApiError } from '../utils'
 import type { ApiResponse, PaginatedResponse } from '../types'
 import type {
+  CreateEngagementProgressLogPayload,
   CreateEngagementDraftPayload,
+  EngagementProgressLog,
   EngagementRequestRow,
   PaginatedEngagements,
 } from '../types/engagement'
@@ -35,11 +37,15 @@ export class EngagementRequestService {
     }
   }
 
-  static async expertPending(page = 0, size = 20): Promise<PaginatedEngagements> {
+  static async expertPending(
+    page = 0,
+    size = 20,
+    statuses?: Array<'PENDING_EXPERT_CONFIRM' | 'IN_PROGRESS'>
+  ): Promise<PaginatedEngagements> {
     try {
       const response = await apiClient.get<ApiResponse<PaginatedResponse<EngagementRequestRow>>>(
         '/engagement-requests/expert-pending',
-        { params: { page, size } }
+        { params: { page, size, ...(statuses?.length ? { statuses: statuses.join(',') } : {}) } }
       )
       return unwrap(response)
     } catch (e) {
@@ -191,6 +197,32 @@ export class EngagementRequestService {
       return unwrap(response)
     } catch (e) {
       throw handleApiError(e, '放分失败')
+    }
+  }
+
+  static async listProgressLogs(id: number): Promise<EngagementProgressLog[]> {
+    try {
+      const response = await apiClient.get<ApiResponse<EngagementProgressLog[]>>(
+        `/engagement-requests/${id}/progress-logs`
+      )
+      return unwrap(response) || []
+    } catch (e) {
+      throw handleApiError(e, '获取过程记录失败')
+    }
+  }
+
+  static async createProgressLog(
+    id: number,
+    body: CreateEngagementProgressLogPayload
+  ): Promise<EngagementProgressLog> {
+    try {
+      const response = await apiClient.post<ApiResponse<EngagementProgressLog>>(
+        `/engagement-requests/${id}/progress-logs`,
+        body
+      )
+      return unwrap(response)
+    } catch (e) {
+      throw handleApiError(e, '提交过程记录失败')
     }
   }
 

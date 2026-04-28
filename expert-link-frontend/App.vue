@@ -1,7 +1,11 @@
 <template>
   <div id="app">
     <router-view v-if="isLoginRoute" />
-    <el-container v-else class="app-container">
+    <el-container
+      v-else
+      class="app-container"
+      :style="{ '--sidebar-width': isSidebarCollapsed ? '64px' : '220px' }"
+    >
       <el-header class="app-header">
         <div class="header-left">
           <el-button
@@ -227,9 +231,21 @@ watch(
 <style scoped>
 .app-container {
   height: 100vh;
+  --header-height: 60px;
+  overflow: hidden;
+}
+
+.app-container > .el-container {
+  height: 100%;
 }
 
 .app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--header-height);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -268,17 +284,28 @@ watch(
 }
 
 .app-sidebar {
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  bottom: 0;
+  z-index: 900;
+  width: var(--sidebar-width) !important;
   background-color: #f8f9fa;
   border-right: 1px solid #e4e7ed;
   transition: width 0.2s ease;
+  overflow: hidden;
 }
 
 .sidebar-menu {
   border-right: none;
   height: 100%;
+  overflow-y: auto;
 }
 
 .app-main {
+  margin-top: var(--header-height);
+  margin-left: var(--sidebar-width);
+  height: calc(100vh - var(--header-height));
   padding: 20px;
   background-color: #f5f7fa;
   overflow-y: auto;

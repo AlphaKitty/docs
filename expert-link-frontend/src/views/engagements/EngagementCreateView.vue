@@ -518,7 +518,9 @@ async function onSave() {
 <style scoped>
 .page {
   padding: 16px;
+  width: 100%;
   max-width: 1200px;
+  margin: 0 auto;
 }
 .head {
   display: flex;
@@ -540,6 +542,15 @@ async function onSave() {
 }
 .form {
   margin-top: 16px;
+}
+.form :deep(.el-form-item__content) {
+  min-width: 0;
+}
+.form :deep(.el-input),
+.form :deep(.el-select),
+.form :deep(.el-date-editor),
+.form :deep(.el-input-number) {
+  width: 100%;
 }
 .mb {
   margin-bottom: 12px;
