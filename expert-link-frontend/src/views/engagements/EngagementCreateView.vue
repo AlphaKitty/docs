@@ -265,7 +265,7 @@ import {
   CONTRIBUTION_SCOPE_BY_ITEM,
   POINTS_CATEGORY_BY_APPLY_CATEGORY,
   POINTS_ITEM_BY_CATEGORY,
-  PROJECT_INFO_VISIBLE_CATEGORIES,
+  shouldShowProjectInfoFields,
   RESULT_SUMMARY_HIDDEN_ITEMS,
   RESULT_SUMMARY_PLACEHOLDER_BY_ITEM,
 } from './engagement-form-config'
@@ -321,7 +321,9 @@ const pointsCategoryOptions = computed(() => POINTS_CATEGORY_BY_APPLY_CATEGORY[e
 const pointsItemOptions = computed(() => POINTS_ITEM_BY_CATEGORY[extraForm.pointsCategory] || [])
 const contributionScopeOptions = computed(() => CONTRIBUTION_SCOPE_BY_ITEM[extraForm.pointsItem] || [])
 const showContributionScope = computed(() => contributionScopeOptions.value.length > 0)
-const showProjectInfoFields = computed(() => PROJECT_INFO_VISIBLE_CATEGORIES.has(extraForm.pointsCategory))
+const showProjectInfoFields = computed(() =>
+  shouldShowProjectInfoFields(extraForm.pointsCategory, extraForm.pointsItem)
+)
 const showResultSummary = computed(() => !RESULT_SUMMARY_HIDDEN_ITEMS.has(extraForm.pointsItem))
 const activityInfoPlaceholder = computed(
   () => ACTIVITY_INFO_PLACEHOLDER_BY_CATEGORY[extraForm.pointsCategory] || '请填写活动背景、目标、过程与结果'

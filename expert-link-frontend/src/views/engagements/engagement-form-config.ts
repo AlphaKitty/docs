@@ -1,16 +1,16 @@
 export const APPLY_CATEGORY_OPTIONS = ['专家调用', '积分自提'] as const
 
 export const POINTS_CATEGORY_BY_APPLY_CATEGORY: Record<string, string[]> = {
-  专家调用: ['评估评审', '问题解决', '成果贡献'],
-  积分自提: ['知识沉淀', '团队成长'],
+  专家调用: ['评估评审', '问题解决'],
+  积分自提: ['成果贡献', '知识沉淀', '团队成长'],
 }
 
 export const POINTS_ITEM_BY_CATEGORY: Record<string, string[]> = {
   评估评审: ['技术评审', '人才评审'],
   问题解决: ['技术支持'],
-  成果贡献: ['行业/技术洞察', '技术成果推广'],
-  知识沉淀: ['人才标准建设', '专业论文', '知识产权', '项目经验沉淀', '知识库建设', '流程制度建设', '课程开发'],
-  团队成长: ['担任导师', '担任讲师', '行业/业务交流'],
+  成果贡献: ['行业/技术洞察', '技术成果推广', '人才标准建设', '专业论文', '知识产权'],
+  知识沉淀: ['项目经验沉淀', '知识库建设', '流程制度建设'],
+  团队成长: ['课程开发', '担任导师', '担任讲师', '行业/业务交流'],
 }
 
 export const CONTRIBUTION_SCOPE_BY_ITEM: Record<string, string[]> = {
@@ -31,7 +31,12 @@ export const CONTRIBUTION_SCOPE_BY_ITEM: Record<string, string[]> = {
   '行业/业务交流': ['行业交流会代表公司发言', '来访/去访中作为代表分享交流'],
 }
 
-export const PROJECT_INFO_VISIBLE_CATEGORIES = new Set(['评估评审', '问题解决', '成果贡献', '项目经验沉淀'])
+/** 项目基本信息：评估评审、问题解决、或积分项目「项目经验沉淀」时显示 */
+export function shouldShowProjectInfoFields(pointsCategory: string, pointsItem: string): boolean {
+  if (pointsCategory === '评估评审' || pointsCategory === '问题解决') return true
+  if (pointsItem === '项目经验沉淀') return true
+  return false
+}
 
 export const RESULT_SUMMARY_HIDDEN_ITEMS = new Set(['技术评审', '人才评审', '技术支持'])
 

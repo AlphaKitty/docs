@@ -289,6 +289,24 @@
       <el-card v-if="isApplicant && row.status === 'IN_PROGRESS'" class="mt" shadow="never">
         <template #header>任务结束评价（触发积分审核）</template>
         <el-form label-width="100px">
+          <el-card v-if="pointsEvalRulesDisplay" shadow="never" class="points-eval-rules mb">
+            <template #header>
+              <span>积分规则说明</span>
+              <el-tag v-if="currentPointsItem" type="info" size="small" class="ml-sm">{{ currentPointsItem }}</el-tag>
+            </template>
+            <div v-if="pointsEvalRulesDisplay.hint" class="rule-block">
+              <div class="rule-title">积分提示</div>
+              <p class="rule-body">{{ pointsEvalRulesDisplay.hint }}</p>
+            </div>
+            <div v-if="pointsEvalRulesDisplay.standard" class="rule-block">
+              <div class="rule-title">积分标准</div>
+              <p class="rule-body pre-line">{{ pointsEvalRulesDisplay.standard }}</p>
+            </div>
+            <div v-if="pointsEvalRulesDisplay.scopeLines" class="rule-block">
+              <div class="rule-title">贡献范围与标准分（本单对照）</div>
+              <p class="rule-body pre-line">{{ pointsEvalRulesDisplay.scopeLines }}</p>
+            </div>
+          </el-card>
           <el-alert
             type="info"
             :closable="false"
@@ -369,6 +387,24 @@
 
       <el-card v-if="canStewardRelease" class="mt" shadow="never">
         <template #header>积分放分（结项）</template>
+        <el-card v-if="pointsEvalRulesDisplay" shadow="never" class="points-eval-rules mb">
+          <template #header>
+            <span>积分规则说明</span>
+            <el-tag v-if="currentPointsItem" type="info" size="small" class="ml-sm">{{ currentPointsItem }}</el-tag>
+          </template>
+          <div v-if="pointsEvalRulesDisplay.hint" class="rule-block">
+            <div class="rule-title">积分提示</div>
+            <p class="rule-body">{{ pointsEvalRulesDisplay.hint }}</p>
+          </div>
+          <div v-if="pointsEvalRulesDisplay.standard" class="rule-block">
+            <div class="rule-title">积分标准</div>
+            <p class="rule-body pre-line">{{ pointsEvalRulesDisplay.standard }}</p>
+          </div>
+          <div v-if="pointsEvalRulesDisplay.scopeLines" class="rule-block">
+            <div class="rule-title">贡献范围与标准分（本单对照）</div>
+            <p class="rule-body pre-line">{{ pointsEvalRulesDisplay.scopeLines }}</p>
+          </div>
+        </el-card>
         <p v-if="row.suggestedScore != null" class="hint">系统建议分：{{ row.suggestedScore }}，可直接作为放分参考。</p>
         <el-alert
           v-if="isExpertCallApply"
@@ -495,6 +531,7 @@ import {
   RESULT_SUMMARY_HIDDEN_ITEMS,
   shouldShowProjectInfoFields,
 } from './engagement-form-config'
+import { getPointsEvalRulesDisplay } from './engagement-eval-display-rules'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -725,6 +762,9 @@ const currentContributionScopeOptions = computed(() => {
 const currentApplicantLevelOptions = computed(() => {
   return APPLICANT_LEVELS_BY_ITEM[currentPointsItem.value] || []
 })
+
+/** 评价打分 / 放分页顶部：积分提示、积分标准、贡献范围与标准分 */
+const pointsEvalRulesDisplay = computed(() => getPointsEvalRulesDisplay(currentPointsItem.value))
 
 const applyCategory = computed(() => parsedTaskDescription.value.map['申请类别'] || '')
 const isExpertCallApply = computed(() => applyCategory.value === '专家调用')
@@ -1582,5 +1622,39 @@ async function downloadAttachment(path: string) {
 :deep(.el-descriptions__cell) {
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.points-eval-rules {
+  border: 1px solid var(--el-border-color-lighter);
+}
+.points-eval-rules :deep(.el-card__header) {
+  padding: 10px 14px;
+}
+.points-eval-rules :deep(.el-card__body) {
+  padding: 12px 14px 14px;
+}
+.ml-sm {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.rule-block + .rule-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--el-border-color-lighter);
+}
+.rule-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  margin-bottom: 6px;
+}
+.rule-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  line-height: 1.55;
+}
+.rule-body.pre-line {
+  white-space: pre-line;
 }
 </style>
