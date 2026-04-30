@@ -58,6 +58,28 @@ const toNumber = (value: unknown, fallback = 0): number => {
   return fallback
 }
 
+/** 后端 domains 多为 Domain 实体（name）；部分接口可能为主领域 + 空 many-to-many 数组，需合并 primaryDomain */
+function domainLabelsFromApi(expert: ExpertDetail & Record<string, any>): string[] {
+  const names = new Set<string>()
+  const push = (s: unknown) => {
+    if (typeof s === 'string' && s.trim()) names.add(s.trim())
+  }
+  if (Array.isArray(expert.domains)) {
+    for (const d of expert.domains) {
+      if (d == null) continue
+      if (typeof d === 'string') {
+        push(d)
+        continue
+      }
+      push((d as { domainName?: string; name?: string }).domainName)
+      push((d as { domainName?: string; name?: string }).name)
+    }
+  }
+  const primary = expert.primaryDomain as { name?: string } | undefined
+  if (primary?.name?.trim()) names.add(primary.name.trim())
+  return [...names]
+}
+
 const adaptExpertFromApi = (expert: ExpertDetail & Record<string, any>): Expert => ({
   id: toNumber(expert.id),
   name: expert.name || '未命名专家',
@@ -68,9 +90,7 @@ const adaptExpertFromApi = (expert: ExpertDetail & Record<string, any>): Expert 
   skills: Array.isArray(expert.skills)
     ? expert.skills.map((skill: any) => skill.skillName || skill.name).filter(Boolean)
     : [],
-  domains: Array.isArray(expert.domains)
-    ? expert.domains.map((d: any) => d.domainName || d.name).filter(Boolean)
-    : (expert.primaryDomain?.name ? [expert.primaryDomain.name] : []),
+  domains: domainLabelsFromApi(expert),
   experience: toNumber(expert.experienceYears ?? expert.yearsOfExperience),
   status: mapApiStatusToStore(
     expert.status ?? (expert.availabilityStatus === 'UNAVAILABLE' ? ExpertStatus.INACTIVE : ExpertStatus.ACTIVE),
@@ -121,47 +141,7 @@ const adaptExpertToUpdateRequest = (id: number, expert: ExpertFormPayload): Upda
 
 export const useExpertStore = defineStore('expert', {
   state: () => ({
-    experts: [
-      {
-        id: 1,
-        name: '张明',
-        title: '高级AI工程师',
-        company: '腾讯科技',
-        email: 'zhangming@tencent.com',
-        phone: '13800138001',
-        skills: ['机器学习', '深度学习', 'Python'],
-        experience: 8,
-        status: 'available' as const,
-        rating: 4.8,
-        avatar: ''
-      },
-      {
-        id: 2,
-        name: '李华',
-        title: '数据科学家',
-        company: '阿里巴巴',
-        email: 'lihua@alibaba.com',
-        phone: '13800138002',
-        skills: ['数据分析', '统计学', 'R语言'],
-        experience: 6,
-        status: 'busy' as const,
-        rating: 4.5,
-        avatar: ''
-      },
-      {
-        id: 3,
-        name: '王强',
-        title: '前端架构师',
-        company: '字节跳动',
-        email: 'wangqiang@bytedance.com',
-        phone: '13800138003',
-        skills: ['Vue.js', 'React', 'TypeScript'],
-        experience: 7,
-        status: 'available' as const,
-        rating: 4.7,
-        avatar: ''
-      }
-    ] as Expert[],
+    experts: [] as Expert[],
     loading: false
   }),
 
@@ -169,8 +149,17 @@ export const useExpertStore = defineStore('expert', {
     async fetchExperts() {
       this.loading = true
       try {
-        const response = await ExpertService.getExperts({ page: 0, size: 100 })
-        this.experts = response.content.map(adaptExpertFromApi)
+        const pageSize = 500
+        let page = 0
+        const acc: Expert[] = []
+        for (;;) {
+          const response = await ExpertService.getExperts({ page, size: pageSize })
+          const chunk = (response.content || []).map(adaptExpertFromApi)
+          acc.push(...chunk)
+          if (chunk.length < pageSize || response.last) break
+          page += 1
+        }
+        this.experts = acc
       } finally {
         this.loading = false
       }
