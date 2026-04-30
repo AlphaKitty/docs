@@ -75,6 +75,7 @@ export interface EngagementRequestRow {
   evalTimeliness?: number | null
   evalAttitude?: number | null
   evalResolved?: boolean | null
+  /** 多专家评价时 JSON 数组，含每位专家的维度分与 comment 内嵌结构化字段 */
   evalComment?: string | null
   evaluationSubmittedAt?: string | null
   suggestedScore?: number | null
