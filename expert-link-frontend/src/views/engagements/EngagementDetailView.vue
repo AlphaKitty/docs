@@ -231,7 +231,7 @@
 
       <el-card v-if="canStewardAssign" class="mt" shadow="never">
         <template #header>行管指派专家</template>
-        <p class="hint">须为已关联本领域的专家（后端校验）；可多选，所选专家均需确认接受后进入执行中。</p>
+        <p class="hint">须为已关联本领域或其子领域的专家（后端按领域子树校验）；可多选，所选专家均需确认接受后进入执行中。</p>
         <el-select
           v-model="assignExpertIds"
           multiple
@@ -255,7 +255,7 @@
 
       <el-card v-if="canStewardReassign" class="mt" shadow="never">
         <template #header>改派专家</template>
-        <p class="hint">待确认或执行中可改派；改派后新名单需重新确认（可多选）。</p>
+        <p class="hint">待确认或执行中可改派；可选本领域及子领域下专家（与指派一致）；改派后新名单需重新确认（可多选）。</p>
         <el-select
           v-model="reassignExpertIds"
           multiple
@@ -458,8 +458,8 @@ import {
   APPLICANT_LEVELS_BY_ITEM,
   BASE_SCORE_BY_ITEM_SCOPE,
   CONTRIBUTION_SCOPE_BY_ITEM,
-  PROJECT_INFO_VISIBLE_CATEGORIES,
   RESULT_SUMMARY_HIDDEN_ITEMS,
+  shouldShowProjectInfoFields,
 } from './engagement-form-config'
 
 const route = useRoute()
@@ -708,7 +708,7 @@ function isFieldRequired(label: string, all: Record<string, string>): boolean {
 
   const pointsCategory = all['积分大类'] || ''
   const pointsItem = all['积分项目'] || ''
-  const showProjectInfo = PROJECT_INFO_VISIBLE_CATEGORIES.has(pointsCategory)
+  const showProjectInfo = shouldShowProjectInfoFields(pointsCategory, pointsItem)
   if (
     showProjectInfo &&
     ['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'].includes(label)

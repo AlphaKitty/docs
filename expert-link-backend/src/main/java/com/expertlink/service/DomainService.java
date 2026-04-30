@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -147,6 +149,41 @@ public class DomainService {
         Set<Long> out = new LinkedHashSet<>();
         for (Long rootId : roots) {
             collectSubtreeIds(rootId, childrenMap, out);
+        }
+        return out;
+    }
+
+    /**
+     * 将领域 ID 扩展为「自身 + 所有祖先领域」，用于专家关联子领域时默认同时写入父域链。
+     */
+    public Set<Long> collectWithAncestorDomainIds(Set<Long> domainIds) {
+        if (domainIds == null || domainIds.isEmpty()) {
+            return Set.of();
+        }
+        List<Domain> all = domainRepository.findAll();
+        Map<Long, Long> parentByChild = new HashMap<>();
+        Set<Long> known = new HashSet<>();
+        for (Domain d : all) {
+            if (d.getId() == null) {
+                continue;
+            }
+            known.add(d.getId());
+            Long pid = d.getParentId();
+            parentByChild.put(d.getId(), (pid != null && pid > 0) ? pid : null);
+        }
+        LinkedHashSet<Long> out = new LinkedHashSet<>();
+        for (Long start : domainIds) {
+            if (start == null || start <= 0 || !known.contains(start)) {
+                continue;
+            }
+            Long cur = start;
+            int guard = 0;
+            while (cur != null && cur > 0 && guard++ < 128) {
+                if (!out.add(cur)) {
+                    break;
+                }
+                cur = parentByChild.get(cur);
+            }
         }
         return out;
     }

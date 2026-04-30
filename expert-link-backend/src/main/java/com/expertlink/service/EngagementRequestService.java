@@ -131,19 +131,28 @@ public class EngagementRequestService {
     }
 
     /**
-     * 专家主领域或关联领域须覆盖申请单领域（超管指派仍校验数据一致性）。
+     * 专家主领域或关联领域须落在申请单领域的子树内（父域申请可选子域专家；与列表接口 by-domain 子树逻辑一致）。
      */
     private void assertExpertCoversRequestDomain(Expert expert, long domainId) {
         Expert loaded = expertRepository.findById(expert.getId())
                 .orElseThrow(() -> new IllegalArgumentException("专家不存在"));
-        if (loaded.getPrimaryDomain() != null && Objects.equals(loaded.getPrimaryDomain().getId(), domainId)) {
+        Set<Long> allowed = domainService.collectSubtreeDomainIds(Set.of(domainId));
+        if (allowed.isEmpty()) {
+            throw new IllegalArgumentException("申请领域无效");
+        }
+        if (loaded.getPrimaryDomain() != null
+                && loaded.getPrimaryDomain().getId() != null
+                && allowed.contains(loaded.getPrimaryDomain().getId())) {
             return;
         }
         if (loaded.getDomains() != null
-                && loaded.getDomains().stream().anyMatch(d -> d.getId() != null && Objects.equals(d.getId(), domainId))) {
+                && loaded.getDomains().stream()
+                        .map(Domain::getId)
+                        .filter(Objects::nonNull)
+                        .anyMatch(allowed::contains)) {
             return;
         }
-        throw new IllegalArgumentException("专家未关联该申请领域，不能指定或指派该专家");
+        throw new IllegalArgumentException("专家未关联该申请领域（含其子领域），不能指定或指派该专家");
     }
 
     private static String newReferenceCode(long id) {

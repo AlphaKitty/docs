@@ -11,7 +11,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -76,5 +78,20 @@ class DomainServiceTest {
         assertNull(saved.getParentId());
         assertNull(saved.getParent());
         assertEquals(1, saved.getLevel());
+    }
+
+    @Test
+    void collectWithAncestorDomainIds_includesParentChain() {
+        Domain parent = Domain.builder().name("父").build();
+        parent.setId(1L);
+        parent.setParentId(null);
+        Domain child = Domain.builder().name("子").build();
+        child.setId(2L);
+        child.setParentId(1L);
+        when(domainRepository.findAll()).thenReturn(List.of(parent, child));
+
+        Set<Long> out = domainService.collectWithAncestorDomainIds(Set.of(2L));
+
+        assertEquals(Set.of(1L, 2L), out);
     }
 }
