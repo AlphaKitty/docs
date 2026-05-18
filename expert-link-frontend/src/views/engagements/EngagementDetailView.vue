@@ -745,10 +745,10 @@ const structuredInfoGroups = computed(() => {
   const projectInfo = pickItems(['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'])
   if (projectInfo.length) groups.push({ title: '项目基本信息', items: projectInfo })
 
-  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动主要信息', '成果提交简述'])
+  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动需求信息', '成果提交简述', '附件', '专家价值'])
   if (activityInfo.length) groups.push({ title: '活动信息', items: activityInfo })
 
-  const expertInfo = pickItems(['专家价值', '需求人数', '技术标签'])
+  const expertInfo = pickItems(['需求人数'])
   if (expertInfo.length) groups.push({ title: '专家需求', items: expertInfo })
 
   return groups
@@ -834,7 +834,8 @@ function isFieldRequired(label: string, all: Record<string, string>): boolean {
     '需求人',
     '联系方式',
     '活动名称',
-    '活动主要信息',
+    '活动需求信息',
+    '附件',
     '专家价值',
   ])
   if (baseRequired.has(label)) return true

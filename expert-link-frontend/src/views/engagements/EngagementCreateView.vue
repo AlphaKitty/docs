@@ -1,7 +1,7 @@
 <template>
   <div v-loading="loading" class="page">
     <div class="head">
-      <h2>新建专家调用申请表（草稿）</h2>
+      <h2>新建专家活动申请（草稿）</h2>
       <div class="head-actions">
         <span class="test-label">测试填充</span>
         <el-switch v-model="testMode" />
@@ -47,9 +47,16 @@
         <template #header>需求方信息</template>
         <div class="grid four">
           <el-form-item label="需求人" required>
-            <el-input v-model="extraForm.requester" placeholder="输入需求人" />
+            <el-select v-model="extraForm.requester" filterable placeholder="搜索选择需求人（默认当前用户）">
+              <el-option
+                v-for="emp in mockEmployeeOptions"
+                :key="emp.id"
+                :label="`${emp.name} (${emp.id})`"
+                :value="emp.name"
+              />
+            </el-select>
           </el-form-item>
-          <el-form-item label="需求部门" required>
+          <el-form-item label="需求人部门" required>
             <el-input v-model="extraForm.requestDept" placeholder="输入部门" />
           </el-form-item>
           <el-form-item label="需求人职位" required>
@@ -62,25 +69,58 @@
       </el-card>
 
       <el-card shadow="never" class="section">
-        <template #header>项目信息</template>
+        <template #header>项目基本信息</template>
         <div class="grid four">
           <el-form-item v-if="showProjectInfoFields" label="项目部门" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.projectDept" placeholder="输入项目部门" />
+            <el-select v-model="extraForm.projectDept" filterable placeholder="默认需求人部门，可改选">
+              <el-option v-for="d in mockDeptOptions" :key="d" :label="d" :value="d" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="项目名称" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.projectName" placeholder="输入项目名称" />
+            <el-select
+              v-model="extraForm.projectName"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="选择或输入项目名称"
+            >
+              <el-option v-for="n in mockProjectNameOptions" :key="n" :label="n" :value="n" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="项目级别" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.projectLevel" placeholder="如 S/A/B" />
+            <el-select v-model="extraForm.projectLevel" placeholder="选择项目级别">
+              <el-option v-for="l in mockProjectLevelOptions" :key="l" :label="l" :value="l" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="客户代码" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.customerCode" placeholder="输入客户代码" />
+            <el-select
+              v-model="extraForm.customerCode"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="选择或输入客户代码"
+            >
+              <el-option v-for="c in mockCustomerCodeOptions" :key="c" :label="c" :value="c" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="产品线" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.productLine" placeholder="输入产品线" />
+            <el-select
+              v-model="extraForm.productLine"
+              multiple
+              filterable
+              allow-create
+              default-first-option
+              placeholder="选择或输入产品线"
+            >
+              <el-option v-for="p in mockProductLineOptions" :key="p" :label="p" :value="p" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="当前阶段" :required="showProjectInfoFields">
-            <el-input v-model="extraForm.currentStage" placeholder="如 EVT/DVT" />
+            <el-select v-model="extraForm.currentStage" placeholder="选择项目阶段">
+              <el-option v-for="s in mockProjectStageOptions" :key="s" :label="s" :value="s" />
+            </el-select>
           </el-form-item>
           <el-form-item v-if="showProjectInfoFields" label="是否KDW" :required="showProjectInfoFields">
             <el-select v-model="extraForm.isKdw">
@@ -98,20 +138,34 @@
       </el-card>
 
       <el-card shadow="never" class="section">
-        <template #header>活动与任务</template>
+        <template #header>活动信息</template>
         <div class="grid four">
-          <el-form-item label="任务类型" required>
-            <el-select v-model="form.taskType">
-              <el-option label="问题解决" value="PROBLEM_SOLVING" />
-              <el-option label="评审" value="REVIEW" />
-              <el-option label="知识管理" value="KNOWLEDGE_MANAGEMENT" />
-            </el-select>
+          <el-form-item label="活动名称" required>
+            <el-input v-model="extraForm.activityName" :placeholder="activityNamePlaceholder" />
           </el-form-item>
-          <el-form-item label="活动名称">
-            <el-input v-model="extraForm.activityName" placeholder="输入活动名称" />
+          <el-form-item label="活动时间" required>
+            <el-date-picker
+              v-model="activityTimeRange"
+              type="datetimerange"
+              range-separator="~"
+              start-placeholder="开始"
+              end-placeholder="结束"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              style="width: 100%"
+            />
           </el-form-item>
-          <el-form-item label="活动地点">
-            <el-input v-model="extraForm.activityLocation" placeholder="输入地点" />
+          <el-form-item label="活动地点" :required="activityLocationRequired">
+            <div class="location-cascade">
+              <el-select v-model="extraForm.locationRegion" placeholder="区域" @change="onLocationRegionChange">
+                <el-option v-for="r in mockLocationRegions" :key="r" :label="r" :value="r" />
+              </el-select>
+              <el-select v-model="extraForm.locationZone" placeholder="厂区" :disabled="!extraForm.locationRegion">
+                <el-option v-for="z in mockLocationZones" :key="z" :label="z" :value="z" />
+              </el-select>
+              <el-select v-model="extraForm.locationBuilding" placeholder="楼栋" :disabled="!extraForm.locationZone">
+                <el-option v-for="b in mockLocationBuildings" :key="b" :label="b" :value="b" />
+              </el-select>
+            </div>
           </el-form-item>
           <el-form-item v-if="showContributionScope" label="贡献范围" :required="showContributionScope">
             <el-select v-model="extraForm.contributionScope">
@@ -123,26 +177,8 @@
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="开始时间" required>
-            <el-date-picker
-              v-model="form.startAt"
-              type="datetime"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-              placeholder="开始"
-              style="width: 100%"
-            />
-          </el-form-item>
-          <el-form-item label="结束时间">
-            <el-date-picker
-              v-model="form.endAt"
-              type="datetime"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-              placeholder="可选"
-              style="width: 100%"
-            />
-          </el-form-item>
         </div>
-        <el-form-item label="活动主要信息" required>
+        <el-form-item label="活动需求信息" required>
           <el-input
             v-model="extraForm.activityInfo"
             type="textarea"
@@ -158,11 +194,39 @@
             :placeholder="resultSummaryPlaceholder"
           />
         </el-form-item>
+        <div class="grid four">
+          <el-form-item label="专家价值" required>
+            <el-input v-model="extraForm.expertValue" placeholder="需求专家参与活动给公司/BG带来的期望价值评估" />
+          </el-form-item>
+          <el-form-item label="附件" required>
+            <el-upload
+              :http-request="onAttachmentUpload"
+              :limit="5"
+              :show-file-list="true"
+            >
+              <el-button type="primary" plain>上传附件</el-button>
+              <template #tip>
+                <div class="hint">PDF/JPEG/PNG/Word，尽量可供预览</div>
+              </template>
+            </el-upload>
+            <div v-if="attachmentPaths.length" class="mt-row">
+              <el-tag
+                v-for="(p, i) in attachmentPaths"
+                :key="i"
+                closable
+                class="tag"
+                @close="removeAttachment(i)"
+              >
+                {{ p }}
+              </el-tag>
+            </div>
+          </el-form-item>
+        </div>
       </el-card>
 
       <el-card shadow="never" class="section">
-        <template #header>领域与专家</template>
-        <el-form-item label="父领域" required>
+        <template #header>专家需求</template>
+        <el-form-item label="需求领域" required>
           <el-select
             v-model="selectedParentIds"
             multiple
@@ -205,14 +269,8 @@
           </el-select>
         </el-form-item>
         <div class="grid four">
-          <el-form-item label="专家价值" required>
-            <el-input v-model="extraForm.expertValue" placeholder="输入价值评估" />
-          </el-form-item>
           <el-form-item label="需求人数">
             <el-input-number v-model="extraForm.requiredCount" :min="1" :max="20" style="width: 100%" />
-          </el-form-item>
-          <el-form-item label="技术标签">
-            <el-input v-model="extraForm.techTags" placeholder="例如：热管理、结构强度" />
           </el-form-item>
         </div>
         <el-form-item label="指定专家" v-if="form.mode === 'NAMED'">
@@ -254,13 +312,16 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import type { UploadRequestOptions } from 'element-plus'
 import { DomainService } from '@/api/services/domain.service'
 import { EngagementRequestService } from '@/api/services/engagement-request.service'
 import { ExpertService } from '@/api/services/expert.service'
 import type { EngagementMode, EngagementTaskType } from '@/api/types/engagement'
 import type { ExpertDetail } from '@/api/types/expert'
 import {
-  ACTIVITY_INFO_PLACEHOLDER_BY_CATEGORY,
+  ACTIVITY_INFO_PLACEHOLDER_BY_ITEM,
+  ACTIVITY_LOCATION_REQUIRED_ITEMS,
+  ACTIVITY_NAME_PLACEHOLDER_BY_APPLY_TYPE,
   APPLY_CATEGORY_OPTIONS,
   CONTRIBUTION_SCOPE_BY_ITEM,
   POINTS_CATEGORY_BY_APPLY_CATEGORY,
@@ -281,6 +342,70 @@ const selectedParentIds = ref<number[]>([])
 const selectedSubdomainIdsByParent = reactive<Record<number, number[]>>({})
 const testMode = ref(false)
 
+// ====== mock 选项数据（后续对接真实字典服务） ======
+const mockEmployeeOptions = [
+  { id: 'EMP001', name: '张三' },
+  { id: 'EMP002', name: '李四' },
+  { id: 'EMP003', name: '王五' },
+  { id: 'EMP004', name: '赵六' },
+  { id: 'EMP005', name: '钱七' },
+]
+const mockDeptOptions = [
+  'BG1-BU1', 'BG1-BU2', 'BG1-BU3',
+  'BG2-BU1', 'BG2-BU2',
+  'BG3-BU1', 'BG3-BU2', 'BG3-BU3',
+]
+const mockProjectNameOptions = ['XR-光学模组', 'XR-结构件', 'TWS-降噪', '智能穿戴-心率', '车载-ARHUD']
+const mockCustomerCodeOptions = ['CUS-001', 'CUS-002', 'CUS-003', 'CUS-004', 'CUS-005']
+const mockProductLineOptions = ['XR产品线', 'TWS产品线', '智能穿戴产品线', '车载产品线', '音频产品线']
+const mockProjectLevelOptions = ['公司级', '部门级', 'S级', 'A级', 'B级']
+const mockProjectStageOptions = ['P1', 'EVT', 'DVT', 'PVT', 'MP']
+
+// 活动地点三级：区域 → 厂区 → 楼栋
+const mockLocationTree: Record<string, Record<string, string[]>> = {
+  '潍坊': {
+    '光电园一期': ['A栋', 'B栋', 'C栋'],
+    '光电园二期': ['D栋', 'E栋'],
+    '综合保税区': ['1号厂房', '2号厂房'],
+  },
+  '青岛': {
+    '崂山研发中心': ['A座', 'B座'],
+    '黄岛厂区': ['1栋', '2栋', '3栋'],
+  },
+  '深圳': {
+    '南山研发中心': ['A栋', 'B栋'],
+  },
+  '越南': {
+    '北宁厂区': ['A1栋', 'A2栋', 'B1栋'],
+  },
+}
+const mockLocationRegions = Object.keys(mockLocationTree)
+const mockLocationZones = computed(() => {
+  const region = extraForm.locationRegion
+  if (!region) return []
+  return Object.keys(mockLocationTree[region] || {})
+})
+const mockLocationBuildings = computed(() => {
+  const region = extraForm.locationRegion
+  const zone = extraForm.locationZone
+  if (!region || !zone) return []
+  return mockLocationTree[region]?.[zone] || []
+})
+
+const attachmentPaths = ref<string[]>([])
+
+const activityTimeRange = ref<[string, string] | null>(null)
+
+watch(activityTimeRange, (val) => {
+  if (val) {
+    form.startAt = val[0]
+    form.endAt = val[1]
+  } else {
+    form.startAt = ''
+    form.endAt = null
+  }
+})
+
 const form = reactive({
   mode: 'STEWARD_ASSIGN' as EngagementMode,
   taskType: 'PROBLEM_SOLVING' as EngagementTaskType,
@@ -299,15 +424,18 @@ const extraForm = reactive({
   requestPosition: '',
   contact: '',
   projectDept: '',
-  projectName: '',
+  projectName: [] as string[],
   projectLevel: '',
-  customerCode: '',
-  productLine: '',
+  customerCode: [] as string[],
+  productLine: [] as string[],
   currentStage: '',
   isKdw: '否',
   isIterative: '否',
   activityName: '',
   activityLocation: '',
+  locationRegion: '',
+  locationZone: '',
+  locationBuilding: '',
   contributionScope: '',
   activityInfo: '',
   resultSummary: '',
@@ -325,9 +453,13 @@ const showProjectInfoFields = computed(() =>
   shouldShowProjectInfoFields(extraForm.pointsCategory, extraForm.pointsItem)
 )
 const showResultSummary = computed(() => !RESULT_SUMMARY_HIDDEN_ITEMS.has(extraForm.pointsItem))
-const activityInfoPlaceholder = computed(
-  () => ACTIVITY_INFO_PLACEHOLDER_BY_CATEGORY[extraForm.pointsCategory] || '请填写活动背景、目标、过程与结果'
+const activityNamePlaceholder = computed(
+  () => ACTIVITY_NAME_PLACEHOLDER_BY_APPLY_TYPE[extraForm.applyCategory] || '请输入活动名称'
 )
+const activityInfoPlaceholder = computed(
+  () => ACTIVITY_INFO_PLACEHOLDER_BY_ITEM[extraForm.pointsItem] || '请填写活动背景、目标、过程与结果'
+)
+const activityLocationRequired = computed(() => ACTIVITY_LOCATION_REQUIRED_ITEMS.has(extraForm.pointsItem))
 const resultSummaryPlaceholder = computed(
   () => RESULT_SUMMARY_PLACEHOLDER_BY_ITEM[extraForm.pointsItem] || '请填写成果提交简述'
 )
@@ -411,6 +543,37 @@ async function loadDomainExperts() {
   }
 }
 
+function onLocationRegionChange() {
+  extraForm.locationZone = ''
+  extraForm.locationBuilding = ''
+}
+
+/** 三级地点同步到 activityLocation 字符串 */
+watch(
+  () => [extraForm.locationRegion, extraForm.locationZone, extraForm.locationBuilding],
+  () => {
+    const parts = [extraForm.locationRegion, extraForm.locationZone, extraForm.locationBuilding].filter(Boolean)
+    extraForm.activityLocation = parts.join(' / ')
+  }
+)
+
+function removeAttachment(i: number) {
+  attachmentPaths.value.splice(i, 1)
+}
+
+async function onAttachmentUpload(opt: UploadRequestOptions) {
+  try {
+    const file = opt.file as File
+    const res = await EngagementRequestService.uploadEvaluationFile(0, file)
+    attachmentPaths.value.push(res.path)
+    opt.onSuccess?.({} as never)
+    ElMessage.success('附件已上传')
+  } catch (e: unknown) {
+    opt.onError?.(e as never)
+    ElMessage.error((e as Error)?.message || '上传失败')
+  }
+}
+
 watch(
   () => [...selectedParentIds.value],
   (ids) => {
@@ -478,6 +641,23 @@ watch(
   { immediate: true }
 )
 
+/** 根据积分大类自动推导 taskType */
+const TASK_TYPE_BY_CATEGORY: Record<string, EngagementTaskType> = {
+  评估评审: 'REVIEW',
+  问题解决: 'PROBLEM_SOLVING',
+  成果贡献: 'KNOWLEDGE_MANAGEMENT',
+  知识沉淀: 'KNOWLEDGE_MANAGEMENT',
+  团队成长: 'KNOWLEDGE_MANAGEMENT',
+}
+watch(
+  () => extraForm.pointsCategory,
+  (next) => {
+    const mapped = TASK_TYPE_BY_CATEGORY[next]
+    if (mapped) form.taskType = mapped
+  },
+  { immediate: true }
+)
+
 function fillTestData() {
   const firstEnabledParent = parentDomains.value.find((d) => d.hasSteward)
   if (firstEnabledParent) {
@@ -498,21 +678,23 @@ function fillTestData() {
   extraForm.requestPosition = '项目经理'
   extraForm.contact = 'zhangsan@example.com'
   extraForm.projectDept = '带出/下拉'
-  extraForm.projectName = '多选/输入示例项目'
+  extraForm.projectName = ['多选/输入示例项目']
   extraForm.projectLevel = 'A'
-  extraForm.customerCode = 'CUS-001'
-  extraForm.productLine = 'XR产品线'
+  extraForm.customerCode = ['CUS-001']
+  extraForm.productLine = ['XR产品线']
   extraForm.currentStage = 'EVT'
   extraForm.isKdw = '否'
   extraForm.isIterative = '是'
   extraForm.activityName = '结构件技术评审（测试）'
-  extraForm.activityLocation = '潍坊 光电园二期'
+  extraForm.locationRegion = '潍坊'
+  extraForm.locationZone = '光电园二期'
+  extraForm.locationBuilding = 'D栋'
+  extraForm.activityLocation = '潍坊 / 光电园二期 / D栋'
   extraForm.contributionScope = '跨BG'
   extraForm.activityInfo = '问题/不良现象：结构干涉。\n已尝试方案：调整装配间隙。\n无法突破点：强度与间隙冲突。'
   extraForm.resultSummary = '1) 评审建议输出；2) 风险清单；3) 后续验证项。'
   extraForm.expertValue = '提供结构强度与可制造性评估。'
   extraForm.requiredCount = 2
-  extraForm.techTags = '结构设计, 热管理, 装配工艺'
 }
 
 function buildTaskDescription(): string {
@@ -523,21 +705,21 @@ function buildTaskDescription(): string {
     `需求人：${extraForm.requester || '—'} / ${extraForm.requestDept || '—'} / ${extraForm.requestPosition || '—'}`,
     `联系方式：${extraForm.contact || '—'}`,
     `项目部门：${extraForm.projectDept || '—'}`,
-    `项目名称：${extraForm.projectName || '—'}`,
+    `项目名称：${extraForm.projectName.length ? extraForm.projectName.join('、') : '—'}`,
     `项目级别：${extraForm.projectLevel || '—'}`,
-    `客户代码：${extraForm.customerCode || '—'}`,
-    `产品线：${extraForm.productLine || '—'}`,
+    `客户代码：${extraForm.customerCode.length ? extraForm.customerCode.join('、') : '—'}`,
+    `产品线：${extraForm.productLine.length ? extraForm.productLine.join('、') : '—'}`,
     `当前阶段：${extraForm.currentStage || '—'}`,
     `是否KDW：${extraForm.isKdw || '—'}`,
     `是否迭代产品：${extraForm.isIterative || '—'}`,
     `活动名称：${extraForm.activityName || '—'}`,
     `活动地点：${extraForm.activityLocation || '—'}`,
     `贡献范围：${extraForm.contributionScope || '—'}`,
-    `活动主要信息：${extraForm.activityInfo || '—'}`,
+    `活动需求信息：${extraForm.activityInfo || '—'}`,
     `成果提交简述：${extraForm.resultSummary || '—'}`,
     `专家价值：${extraForm.expertValue || '—'}`,
     `需求人数：${extraForm.requiredCount}`,
-    `技术标签：${extraForm.techTags || '—'}`,
+    `附件：${attachmentPaths.value.join('; ') || '—'}`,
     '',
     `补充描述：${form.taskDescription || '—'}`,
   ]
@@ -566,8 +748,14 @@ function validateRequiredFields(): string | null {
       return '当前积分大类下，项目信息为必填'
     }
   }
-  if (!extraForm.activityName || !extraForm.activityLocation || !extraForm.activityInfo) {
-    return '请完整填写活动信息'
+  if (!extraForm.activityName) {
+    return '请填写活动名称'
+  }
+  if (activityLocationRequired.value && (!extraForm.locationRegion || !extraForm.locationZone || !extraForm.locationBuilding)) {
+    return '请完整填写活动地点（区域 / 厂区 / 楼栋）'
+  }
+  if (!extraForm.activityInfo) {
+    return '请完整填写活动需求信息'
   }
   if (showContributionScope.value && !extraForm.contributionScope) {
     return '请填写贡献范围'
@@ -577,6 +765,9 @@ function validateRequiredFields(): string | null {
   }
   if (!extraForm.expertValue.trim()) {
     return '请填写专家价值'
+  }
+  if (!attachmentPaths.value.length) {
+    return '请上传附件'
   }
   return null
 }
@@ -687,6 +878,15 @@ async function onSave() {
 }
 .grid.four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.location-cascade {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.location-cascade .el-select {
+  flex: 1;
+  min-width: 0;
 }
 .actions {
   display: flex;
