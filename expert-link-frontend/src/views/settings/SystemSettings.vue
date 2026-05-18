@@ -3,7 +3,7 @@
     <div class="page-header">
       <h2>系统设置</h2>
     </div>
-    
+
     <div class="settings-container">
       <el-tabs v-model="activeTab" class="settings-tabs">
         <el-tab-pane label="基本设置" name="basic">
@@ -15,7 +15,7 @@
               <el-form-item label="系统名称">
                 <el-input v-model="basicForm.systemName" placeholder="请输入系统名称" />
               </el-form-item>
-              
+
               <el-form-item label="系统Logo">
                 <el-upload
                   class="avatar-uploader"
@@ -28,11 +28,11 @@
                   <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
                 </el-upload>
               </el-form-item>
-              
+
               <el-form-item label="版权信息">
                 <el-input v-model="basicForm.copyright" placeholder="请输入版权信息" />
               </el-form-item>
-              
+
               <el-form-item label="系统描述">
                 <el-input
                   v-model="basicForm.description"
@@ -41,7 +41,7 @@
                   placeholder="请输入系统描述"
                 />
               </el-form-item>
-              
+
               <el-form-item>
                 <el-button type="primary" @click="saveBasicSettings">保存设置</el-button>
                 <el-button @click="resetBasicSettings">重置</el-button>
@@ -49,7 +49,7 @@
             </el-form>
           </el-card>
         </el-tab-pane>
-        
+
         <el-tab-pane label="用户管理" name="users">
           <el-card class="settings-card">
             <template #header>
@@ -88,7 +88,7 @@
             </el-table>
           </el-card>
         </el-tab-pane>
-        
+
         <el-tab-pane label="权限设置" name="permissions">
           <el-card class="settings-card">
             <template #header>
@@ -109,7 +109,7 @@
                   </el-tag>
                 </div>
               </div>
-              
+
               <div class="permissions-section">
                 <h4>权限配置</h4>
                 <div v-if="selectedRole" class="permissions-list">
@@ -130,7 +130,7 @@
                 </div>
               </div>
             </div>
-            
+
             <div class="permissions-actions">
               <el-button type="primary" :disabled="!selectedRole" @click="savePermissions">保存权限</el-button>
             </div>
@@ -169,7 +169,7 @@
             </template>
           </el-card>
         </el-tab-pane>
-        
+
         <el-tab-pane label="通知设置" name="notifications">
           <el-card class="settings-card">
             <template #header>
@@ -180,27 +180,27 @@
                 <el-switch v-model="notificationForm.newExpert" />
                 <span class="form-help">当有新专家注册时发送通知</span>
               </el-form-item>
-              
+
               <el-form-item label="新项目创建通知">
                 <el-switch v-model="notificationForm.newProject" />
                 <span class="form-help">当有新项目创建时发送通知</span>
               </el-form-item>
-              
+
               <el-form-item label="匹配成功通知">
                 <el-switch v-model="notificationForm.matchSuccess" />
                 <span class="form-help">当专家与项目匹配成功时发送通知</span>
               </el-form-item>
-              
+
               <el-form-item label="项目进度更新通知">
                 <el-switch v-model="notificationForm.projectUpdate" />
                 <span class="form-help">当项目进度更新时发送通知</span>
               </el-form-item>
-              
+
               <el-form-item label="系统维护通知">
                 <el-switch v-model="notificationForm.systemMaintenance" />
                 <span class="form-help">系统维护前发送通知</span>
               </el-form-item>
-              
+
               <el-form-item label="通知方式">
                 <el-checkbox-group v-model="notificationForm.methods">
                   <el-checkbox label="email">邮件</el-checkbox>
@@ -208,14 +208,14 @@
                   <el-checkbox label="push">推送</el-checkbox>
                 </el-checkbox-group>
               </el-form-item>
-              
+
               <el-form-item>
                 <el-button type="primary" @click="saveNotificationSettings">保存设置</el-button>
               </el-form-item>
             </el-form>
           </el-card>
         </el-tab-pane>
-        
+
         <el-tab-pane label="数据备份" name="backup">
           <el-card class="settings-card">
             <template #header>
@@ -236,13 +236,13 @@
                   <span class="value">{{ backupInfo.backupLocation }}</span>
                 </div>
               </div>
-              
+
               <div class="backup-actions">
                 <el-button type="primary" icon="Download" @click="backupNow">立即备份</el-button>
                 <el-button type="warning" icon="Upload" @click="showRestoreDialog">恢复数据</el-button>
                 <el-button type="info" icon="Setting" @click="showBackupConfig">备份配置</el-button>
               </div>
-              
+
               <div class="backup-history">
                 <h4>备份历史</h4>
                 <el-table :data="backupHistory" style="width: 100%">
@@ -385,19 +385,6 @@ const deleteUser = (user: any) => {
 }
 
 // 权限设置
-const roles = ref([
-  { id: 'admin', name: '管理员', permissions: {} as Record<string, boolean> },
-  { id: 'manager', name: '项目经理', permissions: {} as Record<string, boolean> },
-  { id: 'editor', name: '编辑员', permissions: {} as Record<string, boolean> },
-  { id: 'viewer', name: '查看员', permissions: {} as Record<string, boolean> }
-])
-
-const selectedRoleId = ref('admin')
-
-const selectedRole = computed(() => {
-  return roles.value.find(role => role.id === selectedRoleId.value)
-})
-
 const permissionCategories = ref([
   {
     id: 'expert',
@@ -440,6 +427,30 @@ const permissionCategories = ref([
     ]
   }
 ])
+
+function defaultPermissionsForRole(roleId: string): Record<string, boolean> {
+  const perms: Record<string, boolean> = {}
+  for (const cat of permissionCategories.value) {
+    for (const p of cat.permissions) {
+      // 管理员默认拥有全部权限，其他角色默认只有查看权限
+      perms[p.id] = roleId === 'admin' ? true : p.id.endsWith('_view')
+    }
+  }
+  return perms
+}
+
+const roles = ref([
+  { id: 'admin', name: '管理员', permissions: defaultPermissionsForRole('admin') },
+  { id: 'manager', name: '项目经理', permissions: defaultPermissionsForRole('manager') },
+  { id: 'editor', name: '编辑员', permissions: defaultPermissionsForRole('editor') },
+  { id: 'viewer', name: '查看员', permissions: defaultPermissionsForRole('viewer') }
+])
+
+const selectedRoleId = ref('admin')
+
+const selectedRole = computed(() => {
+  return roles.value.find(role => role.id === selectedRoleId.value)
+})
 
 const selectRole = (roleId: string) => {
   selectedRoleId.value = roleId

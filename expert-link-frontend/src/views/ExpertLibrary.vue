@@ -359,11 +359,10 @@ async function fetchAllDomains(): Promise<void> {
 
 onMounted(async () => {
   try {
-    const tasks: Promise<unknown>[] = []
-    if (!expertStore.experts.length) {
-      tasks.push(expertStore.fetchExperts())
-    }
-    tasks.push(fetchAllDomains())
+    const tasks: Promise<unknown>[] = [
+      expertStore.fetchExperts(),
+      fetchAllDomains()
+    ]
     await Promise.all(tasks)
   } catch {
     ElMessage.error('加载专家库数据失败')

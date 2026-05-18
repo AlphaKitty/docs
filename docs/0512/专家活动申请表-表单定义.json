@@ -1,0 +1,2883 @@
+{
+  "formName": "专家活动申请表",
+  "version": "1.0",
+  "description": "专家调用和积分自提的申请表单及评价打分页面定义。表单字段的可见性和行为由三级联动（申请类别→积分大类→积分项目）决定。",
+  "lastModified": "2025-05-12",
+  "hierarchy": {
+    "applicationTypes": {
+      "专家调用": {
+        "description": "需求方发起专家调用申请",
+        "pointCategories": [
+          "评估评审",
+          "问题解决"
+        ]
+      },
+      "积分自提": {
+        "description": "专家自行提交积分贡献",
+        "pointCategories": [
+          "成果贡献",
+          "知识沉淀",
+          "团队成长"
+        ]
+      }
+    },
+    "categoryItemMapping": {
+      "评估评审": {
+        "label": "评估评审",
+        "items": [
+          "技术评审",
+          "人才评审"
+        ]
+      },
+      "问题解决": {
+        "label": "问题解决",
+        "items": [
+          "技术支持"
+        ]
+      },
+      "成果贡献": {
+        "label": "成果贡献",
+        "items": [
+          "行业/技术洞察",
+          "技术成果推广",
+          "人才标准建设",
+          "专业论文",
+          "知识产权"
+        ]
+      },
+      "知识沉淀": {
+        "label": "知识沉淀",
+        "items": [
+          "项目经验沉淀",
+          "知识库建设",
+          "流程制度建设",
+          "课程开发"
+        ]
+      },
+      "团队成长": {
+        "label": "团队成长",
+        "items": [
+          "担任导师",
+          "担任讲师",
+          "行业/业务交流"
+        ]
+      }
+    }
+  },
+  "allPointItems": [
+    "技术评审",
+    "人才评审",
+    "技术支持",
+    "行业/技术洞察",
+    "技术成果推广",
+    "人才标准建设",
+    "专业论文",
+    "知识产权",
+    "项目经验沉淀",
+    "知识库建设",
+    "流程制度建设",
+    "课程开发",
+    "担任导师",
+    "担任讲师",
+    "行业/业务交流"
+  ],
+  "pointItemGroups": {
+    "expertCall": [
+      "技术评审",
+      "人才评审",
+      "技术支持"
+    ],
+    "contribution": [
+      "行业/技术洞察",
+      "技术成果推广",
+      "人才标准建设",
+      "专业论文",
+      "知识产权"
+    ],
+    "knowledge": [
+      "项目经验沉淀",
+      "知识库建设",
+      "流程制度建设",
+      "课程开发"
+    ],
+    "teamGrowth": [
+      "担任导师",
+      "担任讲师",
+      "行业/业务交流"
+    ]
+  },
+  "pages": {
+    "申请页": {
+      "title": "申请页",
+      "description": "专家活动申请表单，包含申请人信息、项目信息、活动信息、专家需求等模块。根据选择的积分项目动态显示/隐藏字段。",
+      "cascadeSelection": [
+        {
+          "name": "申请类别",
+          "inputType": "下拉选择",
+          "required": true,
+          "description": "选择专家调用或积分自提，决定后续积分大类的可选范围",
+          "options": {
+            "专家调用": {
+              "label": "专家调用",
+              "nextLevelOptions": [
+                "评估评审",
+                "问题解决"
+              ]
+            },
+            "积分自提": {
+              "label": "积分自提",
+              "nextLevelOptions": [
+                "成果贡献",
+                "知识沉淀",
+                "团队成长"
+              ]
+            }
+          }
+        },
+        {
+          "name": "积分大类",
+          "inputType": "下拉选择",
+          "required": true,
+          "description": "根据申请类别联动显示可选的积分大类",
+          "optionsByParent": {
+            "评估评审": {
+              "label": "评估评审",
+              "items": [
+                "技术评审",
+                "人才评审"
+              ]
+            },
+            "问题解决": {
+              "label": "问题解决",
+              "items": [
+                "技术支持"
+              ]
+            },
+            "成果贡献": {
+              "label": "成果贡献",
+              "items": [
+                "行业/技术洞察",
+                "技术成果推广",
+                "人才标准建设",
+                "专业论文",
+                "知识产权"
+              ]
+            },
+            "知识沉淀": {
+              "label": "知识沉淀",
+              "items": [
+                "项目经验沉淀",
+                "知识库建设",
+                "流程制度建设",
+                "课程开发"
+              ]
+            },
+            "团队成长": {
+              "label": "团队成长",
+              "items": [
+                "担任导师",
+                "担任讲师",
+                "行业/业务交流"
+              ]
+            }
+          }
+        },
+        {
+          "name": "积分项目",
+          "inputType": "下拉选择",
+          "required": true,
+          "description": "根据积分大类联动显示可选的积分项目，选中后驱动整个表单的字段显隐和行为",
+          "options": {
+            "技术评审": {
+              "label": "技术评审",
+              "category": "评估评审",
+              "applicationType": "专家调用"
+            },
+            "人才评审": {
+              "label": "人才评审",
+              "category": "评估评审",
+              "applicationType": "专家调用"
+            },
+            "技术支持": {
+              "label": "技术支持",
+              "category": "问题解决",
+              "applicationType": "专家调用"
+            },
+            "行业/技术洞察": {
+              "label": "行业/技术洞察",
+              "category": "成果贡献",
+              "applicationType": "积分自提"
+            },
+            "技术成果推广": {
+              "label": "技术成果推广",
+              "category": "成果贡献",
+              "applicationType": "积分自提"
+            },
+            "人才标准建设": {
+              "label": "人才标准建设",
+              "category": "成果贡献",
+              "applicationType": "积分自提"
+            },
+            "专业论文": {
+              "label": "专业论文",
+              "category": "成果贡献",
+              "applicationType": "积分自提"
+            },
+            "知识产权": {
+              "label": "知识产权",
+              "category": "成果贡献",
+              "applicationType": "积分自提"
+            },
+            "项目经验沉淀": {
+              "label": "项目经验沉淀",
+              "category": "知识沉淀",
+              "applicationType": "积分自提"
+            },
+            "知识库建设": {
+              "label": "知识库建设",
+              "category": "知识沉淀",
+              "applicationType": "积分自提"
+            },
+            "流程制度建设": {
+              "label": "流程制度建设",
+              "category": "知识沉淀",
+              "applicationType": "积分自提"
+            },
+            "课程开发": {
+              "label": "课程开发",
+              "category": "知识沉淀",
+              "applicationType": "积分自提"
+            },
+            "担任导师": {
+              "label": "担任导师",
+              "category": "团队成长",
+              "applicationType": "积分自提"
+            },
+            "担任讲师": {
+              "label": "担任讲师",
+              "category": "团队成长",
+              "applicationType": "积分自提"
+            },
+            "行业/业务交流": {
+              "label": "行业/业务交流",
+              "category": "团队成长",
+              "applicationType": "积分自提"
+            }
+          }
+        }
+      ],
+      "sections": [
+        {
+          "id": "demanderInfo",
+          "name": "需求方信息",
+          "description": "申请人基本信息，由 e-HR 系统自动带出",
+          "fields": [
+            {
+              "name": "需求人",
+              "inputType": "默认带出/搜索选择",
+              "hint": "默认带出当前用户；可搜索选择其他人，改用员工工号避免重名",
+              "source": "e-HR",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            },
+            {
+              "name": "需求人部门",
+              "inputType": "系统带出",
+              "hint": "从 e-HR 截取到 2~3 级：BG-BU",
+              "source": "e-HR",
+              "editable": false,
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            },
+            {
+              "name": "需求人职位",
+              "inputType": "系统带出",
+              "source": "e-HR",
+              "editable": false,
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            },
+            {
+              "name": "联系方式",
+              "inputType": "系统带出",
+              "source": "e-HR",
+              "editable": false,
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "projectInfo",
+          "name": "项目基本信息",
+          "description": "项目相关背景信息。仅在「专家调用」三个积分项目或「项目经验沉淀」时显示。",
+          "fields": [
+            {
+              "name": "项目部门",
+              "inputType": "带出/下拉选择",
+              "hint": "默认带出需求人部门，可手动改为公司所有部门（下拉 2~3 级：BG-BU）",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "项目名称",
+              "inputType": "多选/输入",
+              "hint": "是否有系统统计？",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "项目级别",
+              "inputType": "下拉选择",
+              "hint": "公司所有可选项目级别：① 公司级/部门级 ② x星级",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "客户代码",
+              "inputType": "多选/输入",
+              "hint": "是否有系统统计？",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "产品线",
+              "inputType": "多选/输入",
+              "hint": "是否有系统统计？",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "当前阶段",
+              "inputType": "下拉选择",
+              "hint": "项目所有可选阶段，业务提供，如：P1、EVT、MP",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "是否KDW",
+              "inputType": "下拉选择",
+              "hint": "是 / 否",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "是否迭代产品",
+              "inputType": "下拉选择",
+              "hint": "是 / 否",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "activityInfo",
+          "name": "活动信息",
+          "description": "专家活动的核心信息，各字段的提示文本、选项列表随积分项目变化",
+          "fields": [
+            {
+              "name": "活动名称",
+              "inputType": "输入",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "XX项目XX评审专家XX邀请"
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "XX项目XX评审专家XX邀请"
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "XX项目XX评审专家XX邀请"
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "一句话概括您的成果，便于他人快速识别"
+                }
+              }
+            },
+            {
+              "name": "活动时间",
+              "inputType": "日期范围选择",
+              "hint": "开始时间 ~ 结束时间（至少提前一天提交），以 0.5 天为单位",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            },
+            {
+              "name": "活动地点",
+              "inputType": "三级下拉",
+              "hint": "① 区域（越南算区域）→ ② 厂区 → ③ 楼栋",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": false
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": false
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": false
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": false
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": false
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": false
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": false
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": false
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": false
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": false
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": false
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": false
+                }
+              }
+            },
+            {
+              "name": "贡献范围",
+              "inputType": "下拉选择",
+              "hint": "各积分项目有不同的贡献范围选项，对应不同分值",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "跨BG",
+                      "value": "跨BG"
+                    },
+                    {
+                      "label": "BG内",
+                      "value": "BG内"
+                    }
+                  ]
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "跨BG",
+                      "value": "跨BG"
+                    },
+                    {
+                      "label": "BG内",
+                      "value": "BG内"
+                    }
+                  ]
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "跨BG",
+                      "value": "跨BG"
+                    },
+                    {
+                      "label": "BG内",
+                      "value": "BG内"
+                    }
+                  ]
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "跨BG",
+                      "value": "跨BG"
+                    },
+                    {
+                      "label": "BG内",
+                      "value": "BG内"
+                    },
+                    {
+                      "label": "BU内",
+                      "value": "BU内"
+                    }
+                  ]
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "编写组长",
+                      "value": "编写组长"
+                    },
+                    {
+                      "label": "编写成员",
+                      "value": "编写成员"
+                    }
+                  ]
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "国家级核心刊物",
+                      "value": "国家级核心刊物"
+                    },
+                    {
+                      "label": "省市级刊物",
+                      "value": "省市级刊物"
+                    },
+                    {
+                      "label": "公司内刊物",
+                      "value": "公司内刊物"
+                    }
+                  ]
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "发明专利",
+                      "value": "发明专利"
+                    },
+                    {
+                      "label": "实用新型专利",
+                      "value": "实用新型专利"
+                    }
+                  ]
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "主责建设",
+                      "value": "主责建设"
+                    },
+                    {
+                      "label": "参与建设",
+                      "value": "参与建设"
+                    }
+                  ]
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "主责开发",
+                      "value": "主责开发"
+                    },
+                    {
+                      "label": "参与开发",
+                      "value": "参与开发"
+                    }
+                  ]
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "14+员工导师&A/B+转正",
+                      "value": "14+员工导师&A/B+转正"
+                    },
+                    {
+                      "label": "14+员工导师B转正或14-员工A/B+转正",
+                      "value": "14+员工导师B转正或14-员工A/B+转正"
+                    },
+                    {
+                      "label": "14-员工B转正",
+                      "value": "14-员工B转正"
+                    }
+                  ]
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "公司/专业线级单次>=50人授课",
+                      "value": "公司/专业线级单次>=50人授课"
+                    },
+                    {
+                      "label": "一级部门内单次>=30人授课",
+                      "value": "一级部门内单次>=30人授课"
+                    },
+                    {
+                      "label": "二级部门内单次>=10人授课",
+                      "value": "二级部门内单次>=10人授课"
+                    }
+                  ]
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true,
+                  "options": [
+                    {
+                      "label": "行业交流会代表公司发言",
+                      "value": "行业交流会代表公司发言"
+                    },
+                    {
+                      "label": "来访/去访中作为代表分享交流",
+                      "value": "来访/去访中作为代表分享交流"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "活动需求信息",
+              "inputType": "结构化文本输入",
+              "hint": "专家参与活动内容简要介绍，可带附件，判断问题的难易程度，方便匹配的专家进行应答或方便 R&D Hub 专家资源协调",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "结构化填写提示文本待设计"
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true,
+                  "placeholder": "结构化填写提示文本待设计"
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "问题现象/不良率": "text",
+                    "具体矛盾点": "text（如功能不良/干涉/变形/强度不足/装配困难/手感差等）",
+                    "实测数据与目标值对比": "text",
+                    "问题复现条件": "text",
+                    "已调整/尝试的方案": "text",
+                    "各方案验证结果": "text",
+                    "已排除的原因/方向": "text",
+                    "当前无法突破的卡点": "text"
+                  }
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true,
+                  "structuredPrompt": {
+                    "关联背景": "为解决什么问题或抓住什么机会而做？",
+                    "具体交付物": "报告、代码库、SOP文档、课程PPT、会议纪要",
+                    "量化数据": "覆盖人数、应用次数、节省成本、效率提升百分比等（尽量提供数字）",
+                    "实际影响描述": "对业务、团队、行业产生的可验证价值，有无后续采纳或复制"
+                  }
+                }
+              }
+            },
+            {
+              "name": "成果提交简述",
+              "inputType": "结构化文本输入",
+              "hint": "专家提交积分贡献内容简要介绍，可带附件，判断问题的难易程度",
+              "behaviors": {
+                "技术评审": {
+                  "visible": false
+                },
+                "人才评审": {
+                  "visible": false
+                },
+                "技术支持": {
+                  "visible": false
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "洞察核心观点": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 你关注的具体领域/技术方向是什么？核心结论是什么？"
+                    },
+                    "分析依据": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 通过哪些数据/调研/实验/文献得出该洞察？"
+                    },
+                    "验证与采纳情况": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 该洞察是否已被某团队/项目采用？带来了什么决策调整？"
+                    }
+                  }
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "成果原创说明": {
+                      "inputType": "文本域",
+                      "rows": 2,
+                      "placeholder": "💡 推广的技术成果名称，是否为你主导开发？"
+                    },
+                    "推广渠道与覆盖": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 推广形式（培训/文档/开源/演讲）及范围（部门/公司/行业会议）"
+                    },
+                    "反馈与复用效果": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 收到哪些反馈？产生了多少次复用或二次开发？"
+                    }
+                  }
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "标准面向岗位": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 针对什么岗位/角色制定标准？"
+                    },
+                    "标准内容维度": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 包含哪些能力维度（知识/技能/行为/成果）？"
+                    },
+                    "标准应用成果": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 是否通过评审并应用在招聘/培养/评级中？人才匹配度变化如何？"
+                    }
+                  }
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "论文信息": {
+                      "inputType": "组合字段",
+                      "fields": [
+                        "题目",
+                        "期刊/会议",
+                        "年份",
+                        "作者位次"
+                      ],
+                      "placeholder": "💡 请完整填写发表信息，是否第一作者/通讯作者"
+                    },
+                    "创新点说明": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 相比现有工作的主要创新（方法/模型/理论）"
+                    },
+                    "应用转化情况": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 论文中的原理是否已被内部项目应用？引用次数或获奖情况"
+                    }
+                  }
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "IP类型及状态": {
+                      "inputType": "下拉+输入",
+                      "placeholder": "💡 专利/软著/设计/商标；申请号及状态（已授权/受理中）"
+                    },
+                    "技术方案简述": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 覆盖的核心技术或设计方案"
+                    },
+                    "实施与优势": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 是否已在产品/流程中实施？相比现有技术的主要优势"
+                    }
+                  }
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "来源项目及角色": {
+                      "inputType": "输入框+下拉",
+                      "placeholder": "💡 项目名称、你在其中的角色（PM/架构师/核心开发等）"
+                    },
+                    "沉淀内容形式": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 形式：事后分析报告/经验清单/检查表/模板"
+                    },
+                    "复用情况": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 已被哪些项目正式采用？节省了多少重复试错成本？"
+                    }
+                  }
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "知识库名称及领域": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 所属知识库及领域（如研发中心-故障库）"
+                    },
+                    "贡献内容规模": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 新增X篇文章/修订错误/建立索引，覆盖X个核心概念"
+                    },
+                    "使用效果": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 查阅次数、减少咨询量或好评反馈举例"
+                    }
+                  }
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "制度/流程名称": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 针对的业务场景名称"
+                    },
+                    "旧痛点与新方案": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 旧流程存在哪些痛点？你的方案如何解决？"
+                    },
+                    "实施效果数据": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 实施后效率/合规/满意度前后对比数据"
+                    }
+                  }
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "课程基本信息": {
+                      "inputType": "组合字段",
+                      "fields": [
+                        "名称",
+                        "目标学员",
+                        "时长",
+                        "形式"
+                      ],
+                      "placeholder": "💡 课程名称、对象、总时长、面授/在线/混合"
+                    },
+                    "课程内容结构": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 主要章节及教学方式（案例/实操/考核）"
+                    },
+                    "开课与评价数据": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 期数、总学习人数、满意度评分，是否纳入正式学习体系"
+                    }
+                  }
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "指导对象": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 指导对象角色/代号，指导周期及时长（如3个月，每周1次）"
+                    },
+                    "指导目标与方式": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 指导目标（认证/晋升/完成某任务）及支持方式"
+                    },
+                    "成长成果": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 指导对象的考核提升、成果产出、晋升或表扬记录"
+                    }
+                  }
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "讲授课程信息": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 课程来源（自主开发/标准课程/转授）"
+                    },
+                    "授课数据": {
+                      "inputType": "输入框",
+                      "placeholder": "💡 授课X次，共Y人，平均满意度（1-5分）"
+                    },
+                    "优化与案例": {
+                      "inputType": "文本域",
+                      "rows": 3,
+                      "placeholder": "💡 你是否优化过案例？是否有学员课后产生具体价值？"
+                    }
+                  }
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true,
+                  "subFields": {
+                    "交流事件信息": {
+                      "inputType": "组合字段",
+                      "fields": [
+                        "活动名称",
+                        "形式",
+                        "主办方",
+                        "受众"
+                      ],
+                      "placeholder": "💡 主题演讲/圆桌/内部研讨会组织等"
+                    },
+                    "输出与影响": {
+                      "inputType": "文本域",
+                      "rows": 4,
+                      "placeholder": "💡 你的观点是否被媒体报道或内部回放？是否促成合作或引入资源？"
+                    },
+                    "内部分享情况": {
+                      "inputType": "文本域",
+                      "rows": 2,
+                      "placeholder": "💡 交流后是否撰写总结并分享给内部团队？"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "name": "附件",
+              "inputType": "上传附件",
+              "hint": "支持 PDF / JPEG / PNG / Word，尽量可供预览",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            },
+            {
+              "name": "专家价值",
+              "inputType": "输入",
+              "hint": "需求专家参与活动给公司/BG带来的期望价值评估",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术成果推广": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才标准建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "专业论文": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识产权": {
+                  "visible": true,
+                  "required": true
+                },
+                "项目经验沉淀": {
+                  "visible": true,
+                  "required": true
+                },
+                "知识库建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "流程制度建设": {
+                  "visible": true,
+                  "required": true
+                },
+                "课程开发": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任导师": {
+                  "visible": true,
+                  "required": true
+                },
+                "担任讲师": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/业务交流": {
+                  "visible": true,
+                  "required": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "expertRequirement",
+          "name": "专家需求",
+          "description": "仅在专家调用时显示，用于指定所需专家",
+          "fields": [
+            {
+              "name": "需求领域",
+              "inputType": "下拉/带出",
+              "hint": "两级下拉选择；若从专家库跳转而来则自动带出",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "需求人数",
+              "inputType": "输入",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": false
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "指定专家",
+              "inputType": "搜索选择（多选）/带出",
+              "hint": "搜索选择/多选；若从专家库跳转而来则自动带出",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": false
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "专家列表",
+              "inputType": "系统自动展示",
+              "hint": "列表排列已选专家",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": false
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": false
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "adminAssignment",
+          "name": "行管待办",
+          "description": "行管指派专家环节，仅在专家调用时显示。行管可认可申请人指定的专家或改派其他专家。",
+          "fields": [
+            {
+              "name": "行管指派专家",
+              "inputType": "搜索输入",
+              "hint": "认可或改派：行管可确认申请人指定的专家，或改派为其他专家",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "改派理由",
+              "inputType": "输入",
+              "hint": "行管改派专家时需填写理由",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "expertConfirmation",
+          "name": "专家确认",
+          "description": "被指派的专家接受或拒绝邀请，仅在专家调用时显示",
+          "fields": [
+            {
+              "name": "专家确认",
+              "inputType": "下拉选择",
+              "hint": "接受 / 拒绝",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            },
+            {
+              "name": "拒绝理由",
+              "inputType": "输入",
+              "hint": "专家拒绝时需填写理由",
+              "behaviors": {
+                "技术评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "人才评审": {
+                  "visible": true,
+                  "required": true
+                },
+                "技术支持": {
+                  "visible": true,
+                  "required": true
+                },
+                "行业/技术洞察": {
+                  "visible": false
+                },
+                "技术成果推广": {
+                  "visible": false
+                },
+                "人才标准建设": {
+                  "visible": false
+                },
+                "专业论文": {
+                  "visible": false
+                },
+                "知识产权": {
+                  "visible": false
+                },
+                "项目经验沉淀": {
+                  "visible": false
+                },
+                "知识库建设": {
+                  "visible": false
+                },
+                "流程制度建设": {
+                  "visible": false
+                },
+                "课程开发": {
+                  "visible": false
+                },
+                "担任导师": {
+                  "visible": false
+                },
+                "担任讲师": {
+                  "visible": false
+                },
+                "行业/业务交流": {
+                  "visible": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "评价打分页": {
+      "title": "评价打分页",
+      "description": "对专家贡献进行评分和审核。包含积分提示、积分标准、评分等级、行管审核等模块。",
+      "globalSettings": {
+        "折合门槛": {
+          "description": "若核算日期距专家任期起始日期不足360天，则专家积分门槛需按比例折算",
+          "rule": "积分按照自然年核算，自聘任日期起到自然年底12/31日不满一年的，折算积分门槛 = 积分门槛 ×（聘任日期至年底天数 / 365）",
+          "effect": "专家仅需满足折算积分门槛即可发放年度津贴。年度津贴发放字段值 = 1（否则 = 0）"
+        },
+        "专家等级门槛": {
+          "description": "不同级别专家的年度积分门槛",
+          "thresholds": {
+            "17级": 10,
+            "18级": 12,
+            "19级": 15
+          }
+        }
+      },
+      "scoringByPointItem": {
+        "技术评审": {
+          "积分提示": "作为领域专家，参加部门内或跨部门的项目/方案评审、GPS项目/投资评审等，主动识别本领域关键事项问题/风险，并提出有效建议",
+          "积分标准": "① 每参与跨BG评审4次可获得2分\n② 每参与BG内评审4次可获得1分",
+          "贡献范围标准分值": {
+            "跨BG": 0.5,
+            "BG内": 0.25
+          },
+          "申请人评分等级": {
+            "hasRating": true,
+            "tiers": [
+              {
+                "label": "优秀",
+                "description": "能够主导技术方向",
+                "multiplier": 1.5
+              },
+              {
+                "label": "一般",
+                "description": "问题得到解决，作为参与者，表现一般",
+                "multiplier": 0.8
+              },
+              {
+                "label": "无贡献",
+                "description": "未发挥专家作用",
+                "multiplier": 0
+              }
+            ]
+          },
+          "行管审核评分": {
+            "type": "adjust",
+            "description": "认可或调整评分等级"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/调整理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 6,
+            "description": "累计不得超过6分"
+          }
+        },
+        "人才评审": {
+          "积分提示": "作为评委参与人才标准评审或人才认证答辩等工作",
+          "积分标准": "1次1分",
+          "贡献范围标准分值": {
+            "1次": 1
+          },
+          "申请人评分等级": {
+            "hasRating": true,
+            "tiers": [
+              {
+                "label": "积极",
+                "description": "积极主动进行专业提问与评审",
+                "multiplier": 1.2
+              },
+              {
+                "label": "正常",
+                "description": "正常评审表现",
+                "multiplier": 0.8
+              },
+              {
+                "label": "一般",
+                "description": "提问与交流较少且打分持续较高",
+                "multiplier": 0.5
+              }
+            ]
+          },
+          "行管审核评分": {
+            "type": "adjust",
+            "description": "认可或调整评分等级"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/调整理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 5,
+            "description": "累计不得超过5分"
+          }
+        },
+        "技术支持": {
+          "积分提示": "以技委会专家身份，参与跨BG/BU的技术攻关顺利攻克或跨BG专项顺利完成专项任务等，BG反馈满意度评分3分及以上",
+          "积分标准": "① 跨BG专项2分\n② BG内专项1分",
+          "贡献范围标准分值": {
+            "跨BG": 2,
+            "BG内": 1
+          },
+          "申请人评分等级": {
+            "hasRating": true,
+            "tiers": [
+              {
+                "label": "卓越",
+                "description": "能够完全解决难点问题",
+                "multiplier": 2
+              },
+              {
+                "label": "优秀",
+                "description": "能够给出正确的解决方向并配合项目组完成问题的解决",
+                "multiplier": 1.5
+              },
+              {
+                "label": "一般",
+                "description": "问题得到解决，作为参与者，表现一般",
+                "multiplier": 0.8
+              },
+              {
+                "label": "无贡献",
+                "description": "未发挥专家作用",
+                "multiplier": 0
+              }
+            ]
+          },
+          "行管审核评分": {
+            "type": "adjust",
+            "description": "认可或调整评分等级"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/调整理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 6,
+            "description": "累计不得超过6分"
+          }
+        },
+        "行业/技术洞察": {
+          "积分提示": "基于业务战略及行业趋势，识别当前行业/技术/产品/管理热点，输出行业/技术/产品洞察报告，并在内部评审、分享",
+          "积分标准": "1个1分",
+          "贡献范围标准分值": {
+            "1个": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 5,
+            "description": "累计不得超过5分"
+          }
+        },
+        "技术成果推广": {
+          "积分提示": "将技术预研、攻关、研究等成果进行萃取、包装和转化，形成案例并在相关领域内推广应用，如项目案例、GPS案例包装推广等",
+          "积分标准": "① 跨BG应用3分\n② BG内应用2分\n③ BU内应用1分",
+          "贡献范围标准分值": {
+            "跨BG": 3,
+            "BG内": 2,
+            "BU内": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "人才标准建设": {
+          "积分提示": "作为编写成员主责或参与人才标准（岗位职责、任职标准、学习地图等）建设",
+          "积分标准": "① 作为编写组长主责人才标准的编写工作2分\n② 作为编写成员参与岗位标准的编写工作1分",
+          "贡献范围标准分值": {
+            "编写组长": 2,
+            "编写成员": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 6,
+            "description": "累计不得超过6分"
+          }
+        },
+        "专业论文": {
+          "积分提示": "在行业专业期刊/网站/公众号上，以排名前3的作者身份发表专业论文/文章等",
+          "积分标准": "① 国家级核心期刊发表1篇 3分\n② 省市级刊物发表1篇 2分\n③ 公司内刊物发表1篇 1分",
+          "贡献范围标准分值": {
+            "国家级核心刊物": 3,
+            "省市级刊物": 2,
+            "公司内刊物": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "知识产权": {
+          "积分提示": "以排名前3的身份获得知识产权",
+          "积分标准": "① 以排名前3的身份获得发明专利1次2分\n② 以排名前3的身份实用新型专利1次1分",
+          "贡献范围标准分值": {
+            "发明专利": 2,
+            "实用新型专利": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "项目经验沉淀": {
+          "积分提示": "定期做好项目复盘，形成有价值的lesson learn",
+          "积分标准": "有价值的lesson learn 1次1个1分",
+          "贡献范围标准分值": {
+            "1个": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 5,
+            "description": "累计不得超过5分"
+          }
+        },
+        "知识库建设": {
+          "积分提示": "及时总结和转化典型问题，形成相应的案例分析或操作指导，并对相关知识（Checklist/Design guide/失效模式）进行更新和关联，典型问题经评审在知识库发布",
+          "积分标准": "典型问题经评审在知识库发布，每3个问题可获得1分",
+          "贡献范围标准分值": {
+            "每3个问题": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": true,
+            "maxScore": 5,
+            "description": "累计不得超过5分"
+          }
+        },
+        "流程制度建设": {
+          "积分提示": "参与或主导流程、制度、管理规范等标准的建设工作，并经过公司评审发布",
+          "积分标准": "① 主责一级部门/业务领域内制度或流程建设/个2分\n② 作为核心成员参与一级部门/业务领域内制度或流程建设/个1分",
+          "贡献范围标准分值": {
+            "主责建设": 2,
+            "参与建设": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "课程开发": {
+          "积分提示": "主导专业类或通用类课程开发，课程经人力资源本部或一级部门内部认证备案",
+          "积分标准": "① 主责公司级/专业线课程开发/门2分\n② 作为核心成员参与公司级/专业线课程开发或主导一级部门内课程开发/门1分",
+          "贡献范围标准分值": {
+            "主责开发": 2,
+            "参与开发": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "担任导师": {
+          "积分提示": "担任员工导师，包括歌尔之翼、内部调岗或社招员工",
+          "积分标准": "① 担任14级及以上员工导师，辅导员工顺利转正，且员工评价A/B+ 1人3分\n② 担任14级及以上员工导师，辅导员工顺利转正，且员工评价B；或担任14级以下员工导师，辅导员工顺利转正，且员工评价A/B+ 1人2分\n③ 担任14级以下员工导师，辅导员工顺利转正，且员工评价B 1人1分",
+          "贡献范围标准分值": {
+            "14+员工导师&A/B+转正": 3,
+            "14+员工导师B转正或14-员工A/B+转正": 2,
+            "14-员工B转正": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "担任讲师": {
+          "积分提示": "担任内部讲师，在内部分享知识、经验，单次培训人数不得少于10人，有签到表/纪要",
+          "积分标准": "① 进行公司级/专业线级培训授课，单次培训人次不低于50人 1次3分\n② 进行一级部门内部培训授课，单次培训人次不低于30人 1次2分\n③ 担任二级部门内部培训授课，单次培训人次不低于10人 1次1分",
+          "贡献范围标准分值": {
+            "公司/专业线级单次>=50人授课": 3,
+            "一级部门内单次>=30人授课": 2,
+            "二级部门内单次>=10人授课": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        },
+        "行业/业务交流": {
+          "积分提示": "作为领域专家代表在行业/业务领域内技术交流/访谈拜访/客户来访等活动中发表课题、分享经验等",
+          "积分标准": "① 参与行业交流会，并作为公司代表分享发言 1次2分\n② 外部公司来访/到访外部公司/客户来访作为代表进行分享交流 1次1分",
+          "贡献范围标准分值": {
+            "行业交流会代表公司发言": 2,
+            "来访/去访中作为代表分享交流": 1
+          },
+          "申请人评分等级": {
+            "hasRating": false,
+            "description": "无等级，系统带出标准分值"
+          },
+          "行管审核评分": {
+            "type": "approve",
+            "description": "认可或不认可（不获得积分）"
+          },
+          "行管评分理由": {
+            "type": "input",
+            "description": "认可/不认可理由"
+          },
+          "积分上限": {
+            "enabled": false
+          }
+        }
+      }
+    }
+  }
+}

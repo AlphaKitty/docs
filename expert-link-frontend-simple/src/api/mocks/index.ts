@@ -1,2 +1,0 @@
-export { mockExperts, mockProjects, mockSkills, mockDomains, mockDashboardStats, mockExpertStats, mockProjectStats, mockSkillStats, mockUserProfile } from './mock-data';
-export { MockService } from './mock-service';

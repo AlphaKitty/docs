@@ -139,9 +139,10 @@ public class ExpertService {
             expert.setSkills(skills);
         }
 
-        // 添加领域
+        // 添加领域（子领域自动扩展为含父域链）
         if (domainIds != null && !domainIds.isEmpty()) {
-            Set<Domain> domains = new HashSet<>(domainRepository.findAllById(domainIds));
+            Set<Long> expanded = domainService.collectWithAncestorDomainIds(domainIds);
+            Set<Domain> domains = new HashSet<>(domainRepository.findAllById(expanded));
             expert.setDomains(domains);
         }
 
@@ -312,13 +313,15 @@ public class ExpertService {
 
                     String domainNames = readString(row.getCell(11));
                     if (StringUtils.hasText(domainNames)) {
-                        Set<Domain> domains = Arrays.stream(domainNames.split(","))
+                        Set<Long> leafIds = Arrays.stream(domainNames.split(","))
                                 .map(String::trim)
                                 .filter(StringUtils::hasText)
                                 .map(nameText -> domainRepository.findByName(nameText)
-                                        .orElseThrow(() -> new IllegalArgumentException("领域不存在: " + nameText)))
+                                        .orElseThrow(() -> new IllegalArgumentException("领域不存在: " + nameText))
+                                        .getId())
                                 .collect(Collectors.toCollection(LinkedHashSet::new));
-                        expert.setDomains(domains);
+                        Set<Long> expanded = domainService.collectWithAncestorDomainIds(leafIds);
+                        expert.setDomains(new HashSet<>(domainRepository.findAllById(expanded)));
                     }
 
                     String skillNames = readString(row.getCell(12));
@@ -583,9 +586,12 @@ public class ExpertService {
             existingExpert.getSkills().addAll(skills);
         }
 
-        // 更新领域
+        // 更新领域（子领域自动扩展为含父域链）
         if (domainIds != null) {
-            Set<Domain> domains = new HashSet<>(domainRepository.findAllById(domainIds));
+            Set<Long> expanded = domainIds.isEmpty()
+                    ? Set.of()
+                    : domainService.collectWithAncestorDomainIds(domainIds);
+            Set<Domain> domains = new HashSet<>(domainRepository.findAllById(expanded));
             existingExpert.getDomains().clear();
             existingExpert.getDomains().addAll(domains);
         }
@@ -775,10 +781,12 @@ public class ExpertService {
     @Transactional
     public Expert addDomain(Long expertId, Long domainId) {
         Expert expert = findById(expertId);
-        Domain domain = domainRepository.findById(domainId)
-                .orElseThrow(() -> new RuntimeException("领域不存在，ID: " + domainId));
-        
-        expert.addDomain(domain);
+        Set<Long> withAncestors = domainService.collectWithAncestorDomainIds(Set.of(domainId));
+        for (Long id : withAncestors) {
+            Domain d = domainRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("领域不存在，ID: " + id));
+            expert.addDomain(d);
+        }
         return expertRepository.save(expert);
     }
 
