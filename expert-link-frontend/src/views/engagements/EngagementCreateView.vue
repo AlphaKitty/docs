@@ -564,7 +564,7 @@ function removeAttachment(i: number) {
 async function onAttachmentUpload(opt: UploadRequestOptions) {
   try {
     const file = opt.file as File
-    const res = await EngagementRequestService.uploadEvaluationFile(0, file)
+    const res = await EngagementRequestService.uploadFile(file)
     attachmentPaths.value.push(res.path)
     opt.onSuccess?.({} as never)
     ElMessage.success('附件已上传')
