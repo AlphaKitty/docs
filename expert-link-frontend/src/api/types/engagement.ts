@@ -10,7 +10,7 @@ export type EngagementStatus =
   | 'REJECTED'
   | 'CANCELLED'
 
-export type EngagementMode = 'NAMED' | 'STEWARD_ASSIGN'
+export type EngagementMode = 'NAMED' | 'STEWARD_ASSIGN' | 'SELF'
 
 export type EngagementTaskType = 'PROBLEM_SOLVING' | 'REVIEW' | 'KNOWLEDGE_MANAGEMENT'
 
@@ -45,6 +45,10 @@ export interface EngagementRequestRow {
   referenceCode?: string | null
   status: EngagementStatus
   mode: EngagementMode
+  applyCategory?: string | null
+  pointsCategory?: string | null
+  pointsItem?: string | null
+  isSelfPick?: boolean | null
   taskType: EngagementTaskType
   domainId: number
   domainName: string
@@ -96,6 +100,9 @@ export interface EngagementRequestRow {
 export interface CreateEngagementDraftPayload {
   domainId: number
   mode: EngagementMode
+  applyCategory?: string | null
+  pointsCategory?: string | null
+  pointsItem?: string | null
   taskType: EngagementTaskType
   startAt: string
   endAt?: string | null

@@ -12,6 +12,9 @@ public class PatchEngagementDraftRequest {
 
     private Long domainId;
     private EngagementMode mode;
+    private String applyCategory;
+    private String pointsCategory;
+    private String pointsItem;
     private EngagementTaskType taskType;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
