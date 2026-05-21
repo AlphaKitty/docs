@@ -76,14 +76,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSystemSettingsStore } from '@/stores/system-settings'
 import {
   Expand,
   Fold,
-  House,
   User,
   Document,
   DataAnalysis,
@@ -107,14 +106,13 @@ type MenuLeaf = {
 type MenuGroup = {
   key: string
   label: string
-  icon: typeof House
+  icon: typeof User
   path?: string
   children?: MenuLeaf[]
 }
 
 const menuConfig: MenuGroup[] = [
-  { key: 'dashboard', label: '仪表盘', icon: House, path: '/' },
-  { key: 'expertLibrary', label: '专家库', icon: User, path: '/expert-library' },
+  { key: 'expertLibrary', label: '专家库', icon: User, path: '/' },
   {
     key: 'engagements',
     label: '调用申请',
@@ -179,7 +177,7 @@ const activeMenu = computed(() => {
     return '/engagements/mine'
   }
 
-  if (p.startsWith('/expert-library') || p.startsWith('/dashboard/expert-profile')) return '/expert-library'
+  if (p.startsWith('/expert-library') || p.startsWith('/dashboard/expert-profile')) return '/'
   if (p.startsWith('/experts')) return '/experts'
   if (p.startsWith('/domains')) return '/domains'
   if (p.startsWith('/skills')) return '/skills'
@@ -216,16 +214,6 @@ const onUserMenu = (cmd: string) => {
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
-
-watch(
-  () => route.path,
-  (path) => {
-    if (path === '/') {
-      isSidebarCollapsed.value = true
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <style scoped>

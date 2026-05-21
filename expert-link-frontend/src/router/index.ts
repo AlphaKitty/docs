@@ -14,15 +14,13 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'Dashboard',
-      component: () => import('@/views/Dashboard.vue'),
-      meta: { menuKey: 'dashboard' },
-    },
-    {
-      path: '/expert-library',
       name: 'ExpertLibrary',
       component: () => import('@/views/ExpertLibrary.vue'),
       meta: { menuKey: 'expertLibrary' },
+    },
+    {
+      path: '/expert-library',
+      redirect: '/',
     },
     {
       path: '/experts',
@@ -231,7 +229,7 @@ router.beforeEach(async (to) => {
   const menuKey = to.meta.menuKey as string | undefined
   if (menuKey && !settings.canAccessMenu(auth.roles, menuKey)) {
     const fallbackCandidates = [
-      { path: '/', menuKey: 'dashboard' },
+      { path: '/', menuKey: 'expertLibrary' },
       { path: '/engagements/mine', menuKey: 'engagements.mine' },
       { path: '/experts', menuKey: 'experts' },
       { path: '/projects', menuKey: 'projects' },

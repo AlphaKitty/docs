@@ -32,76 +32,77 @@
         <template #header>
           <div class="card-header">
             <span>专家库（按领域分组）</span>
-            <span class="sub-text">默认折叠，点击展开查看</span>
+            <span class="sub-text">点击领域节点查看专家</span>
           </div>
         </template>
 
-        <el-collapse v-model="activeParentGroups">
-          <el-collapse-item
-            v-for="parent in groupedExperts"
-            :key="parent.name"
-            :name="parent.name"
+        <div class="tree-panel">
+          <el-tree
+            :data="domainTreeData"
+            :props="{ children: 'children', label: 'name' }"
+            node-key="id"
+            :expand-on-click-node="true"
+            highlight-current
+            :default-expanded-keys="defaultExpandedKeys"
+            @node-click="handleTreeNodeClick"
           >
-            <template #title>
-              <div class="group-title">
-                <span>{{ parent.name }}</span>
-                <el-tag size="small" type="info">{{ parent.expertCount }} 人</el-tag>
-              </div>
+            <template #default="{ data }">
+              <span class="custom-tree-node">
+                <span class="tree-node-label">{{ data.name }}</span>
+                <el-tag size="small" type="info">{{ data.expertCount }} 人</el-tag>
+              </span>
             </template>
-
-            <el-collapse v-model="activeChildGroups">
-              <el-collapse-item
-                v-for="child in parent.children"
-                :key="`${parent.name}-${child.name}`"
-                :name="`${parent.name}:${child.name}`"
-              >
-                <template #title>
-                  <div class="group-title child-title">
-                    <span>{{ child.name }}</span>
-                    <el-tag size="small" type="info">{{ child.experts.length }} 人</el-tag>
-                  </div>
-                </template>
-                <div class="expert-card-list">
-                  <div
-                    v-for="expert in child.experts"
-                    :key="expert.id"
-                    class="expert-card"
-                    @click="goToExpertProfile(expert.id)"
-                  >
-                    <div class="expert-left">
-                      <el-avatar :size="42" :src="expert.avatar" />
-                      <div class="expert-main">
-                        <div class="name-row">
-                          <span class="name">{{ expert.name }}</span>
-                          <el-tag :type="getStatusType(expert.status)" size="small">
-                            {{ getStatusText(expert.status) }}
-                          </el-tag>
-                        </div>
-                        <div class="meta">{{ expert.title || '未填写职位' }}</div>
-                        <div class="skills">
-                          <el-tag
-                            v-for="skill in expert.skills.slice(0, 4)"
-                            :key="skill"
-                            size="small"
-                            class="skill-tag"
-                          >
-                            {{ skill }}
-                          </el-tag>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="expert-right">
-                      <span class="score-label">评分</span>
-                      <span class="score">{{ Number(expert.rating || 0).toFixed(1) }}</span>
-                    </div>
-                  </div>
-                </div>
-              </el-collapse-item>
-            </el-collapse>
-          </el-collapse-item>
-        </el-collapse>
+          </el-tree>
+        </div>
 
         <el-empty v-if="groupedExperts.length === 0" description="暂无匹配专家" />
+
+        <template v-else>
+          <div v-if="selectedExperts.length > 0" class="selected-domain-header">
+            <span>{{ selectedDomainName }}</span>
+            <el-tag size="small" type="info">{{ selectedExperts.length }} 人</el-tag>
+          </div>
+
+          <div v-if="selectedExperts.length > 0" class="expert-card-list">
+            <div
+              v-for="expert in selectedExperts"
+              :key="expert.id"
+              class="expert-card"
+              @click="goToExpertProfile(expert.id)"
+            >
+              <div class="expert-left">
+                <el-avatar :size="42" :src="expert.avatar" />
+                <div class="expert-main">
+                  <div class="name-row">
+                    <span class="name">{{ expert.name }}</span>
+                    <el-tag :type="getStatusType(expert.status)" size="small">
+                      {{ getStatusText(expert.status) }}
+                    </el-tag>
+                  </div>
+                  <div class="meta">{{ expert.title || '未填写职位' }}</div>
+                  <div class="skills">
+                    <el-tag
+                      v-for="skill in expert.skills.slice(0, 4)"
+                      :key="skill"
+                      size="small"
+                      class="skill-tag"
+                    >
+                      {{ skill }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+              <div class="expert-right">
+                <span class="score-label">评分</span>
+                <span class="score">{{ Number(expert.rating || 0).toFixed(1) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="tree-hint">
+            <span>点击领域节点查看该领域下的专家</span>
+          </div>
+        </template>
       </el-card>
 
       <el-card class="rank-card">
@@ -148,8 +149,8 @@ type FilterKey =
 
 const router = useRouter()
 const expertStore = useExpertStore()
-const activeParentGroups = ref<string[]>([])
-const activeChildGroups = ref<string[]>([])
+const selectedNodeKey = ref<string>('')
+const defaultExpandedKeys = ref<string[]>([])
 const allDomains = ref<DomainDetail[]>([])
 
 const filterFields: Array<{ label: string; key: FilterKey }> = [
@@ -281,6 +282,62 @@ const groupedExperts = computed(() => {
   return result
 })
 
+interface DomainTreeNode {
+  id: string
+  name: string
+  expertCount: number
+  experts?: (typeof normalizedExperts.value)[number][]
+  children?: DomainTreeNode[]
+}
+
+const domainTreeData = computed<DomainTreeNode[]>(() => {
+  return groupedExperts.value.map(parent => ({
+    id: parent.name,
+    name: parent.name,
+    expertCount: parent.expertCount,
+    children: parent.children.map(child => ({
+      id: `${parent.name}:${child.name}`,
+      name: child.name,
+      expertCount: child.experts.length,
+      experts: child.experts,
+    })),
+  }))
+})
+
+const selectedExperts = computed(() => {
+  if (!selectedNodeKey.value) return []
+  for (const parent of domainTreeData.value) {
+    if (parent.children) {
+      for (const child of parent.children) {
+        if (child.id === selectedNodeKey.value) {
+          return child.experts || []
+        }
+      }
+    }
+  }
+  return []
+})
+
+const selectedDomainName = computed(() => {
+  if (!selectedNodeKey.value) return ''
+  for (const parent of domainTreeData.value) {
+    if (parent.children) {
+      for (const child of parent.children) {
+        if (child.id === selectedNodeKey.value) {
+          return `${parent.name} / ${child.name}`
+        }
+      }
+    }
+  }
+  return ''
+})
+
+const handleTreeNodeClick = (data: DomainTreeNode) => {
+  if (!data.children || data.children.length === 0) {
+    selectedNodeKey.value = data.id
+  }
+}
+
 const rankingExperts = computed(() => {
   return [...expertStore.experts]
     .map((item) => ({
@@ -294,8 +351,8 @@ const rankingExperts = computed(() => {
 })
 
 const triggerSearch = () => {
-  activeParentGroups.value = []
-  activeChildGroups.value = []
+  selectedNodeKey.value = ''
+  defaultExpandedKeys.value = []
 }
 
 const resetFilters = () => {
@@ -309,8 +366,8 @@ const resetFilters = () => {
   filters.department = ''
   filters.client = ''
   filters.bg = ''
-  activeParentGroups.value = []
-  activeChildGroups.value = []
+  selectedNodeKey.value = ''
+  defaultExpandedKeys.value = []
 }
 
 const getStatusType = (status: string) => {
@@ -433,15 +490,68 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-.group-title {
+/* ---------- 领域树 ---------- */
+.tree-panel {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.tree-panel :deep(.el-tree-node__content) {
+  height: 36px;
+  border-radius: 6px;
+  padding-right: 8px;
+}
+
+.tree-panel :deep(.el-tree-node__content:hover) {
+  background: #f0f2f5;
+}
+
+.tree-panel :deep(.el-tree-node.is-current > .el-tree-node__content) {
+  background: #ecf5ff;
+}
+
+.tree-panel :deep(.el-tree-node.is-expanded > .el-tree-node__content) {
+  font-weight: 600;
+}
+
+.custom-tree-node {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
-.child-title {
-  padding-left: 10px;
+.tree-node-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.selected-domain-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ebeef5;
+  font-weight: 600;
+  font-size: 14px;
+  color: #303133;
+}
+
+.tree-hint {
+  margin-top: 24px;
+  text-align: center;
+  color: #909399;
+  font-size: 13px;
+}
+
+/* ---------- 专家卡片列表 ---------- */
 
 .expert-card-list {
   display: grid;
