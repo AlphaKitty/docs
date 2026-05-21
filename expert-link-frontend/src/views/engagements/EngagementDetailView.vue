@@ -13,12 +13,7 @@
         :active="stepMeta.active"
         :status="stepMeta.stepsStatus"
       >
-        <el-step title="草稿" />
-        <el-step title="待行管指派" />
-        <el-step title="专家确认" />
-        <el-step title="执行中" />
-        <el-step title="待放分" />
-        <el-step title="已结项" />
+        <el-step v-for="s in stepDefs" :key="s" :title="s" />
       </el-steps>
 
       <el-tag class="mb">{{ statusText(row.status) }}</el-tag>
@@ -789,21 +784,35 @@ const parsedAttachments = computed(() => {
   return attachmentLine.split(';').map((s: string) => s.trim()).filter(Boolean)
 })
 
+const selfPickStepOrder = [
+  'DRAFT',
+  'IN_PROGRESS',
+  'PENDING_STEWARD_SCORE_RELEASE',
+  'COMPLETED',
+] as const
+
+const normalStepOrder = [
+  'DRAFT',
+  'PENDING_STEWARD_ASSIGN',
+  'PENDING_EXPERT_CONFIRM',
+  'IN_PROGRESS',
+  'PENDING_STEWARD_SCORE_RELEASE',
+  'COMPLETED',
+] as const
+
+const selfPickStepDefs = ['草稿', '执行中', '待放分', '已结项']
+const normalStepDefs = ['草稿', '待行管指派', '专家确认', '执行中', '待放分', '已结项']
+
+const stepDefs = computed(() => (row.value?.isSelfPick ? selfPickStepDefs : normalStepDefs))
+
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
   const s = row.value.status
+  const order: readonly string[] = row.value.isSelfPick ? selfPickStepOrder : normalStepOrder
   if (s === 'REJECTED') return { active: 2, stepsStatus: 'error' as const }
   if (s === 'CANCELLED') return { active: 1, stepsStatus: 'error' as const }
-  const order = [
-    'DRAFT',
-    'PENDING_STEWARD_ASSIGN',
-    'PENDING_EXPERT_CONFIRM',
-    'IN_PROGRESS',
-    'PENDING_STEWARD_SCORE_RELEASE',
-    'COMPLETED',
-  ] as const
-  const i = order.indexOf(s as (typeof order)[number])
-  if (s === 'COMPLETED') return { active: 6, stepsStatus: undefined }
+  const i = order.indexOf(s)
+  if (s === 'COMPLETED') return { active: order.length, stepsStatus: undefined }
   return { active: i < 0 ? 0 : i, stepsStatus: undefined }
 })
 

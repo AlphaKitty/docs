@@ -518,6 +518,10 @@ public class EngagementRequestService {
                 .referenceCode(e.getReferenceCode())
                 .status(e.getStatus().name())
                 .mode(e.getMode().name())
+                .applyCategory(e.getApplyCategory())
+                .pointsCategory(e.getPointsCategory())
+                .pointsItem(e.getPointsItem())
+                .isSelfPick(EngagementMode.SELF == e.getMode())
                 .taskType(e.getTaskType().name())
                 .domainId(e.getDomain().getId())
                 .domainName(e.getDomain().getName())
@@ -630,9 +634,15 @@ public class EngagementRequestService {
         User applicant = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
         Domain domain = domainService.findById(dto.getDomainId());
-        assertDomainHasSteward(domain);
+        boolean selfPick = "积分自提".equals(dto.getApplyCategory());
+        if (!selfPick) {
+            assertDomainHasSteward(domain);
+        }
         EngagementRequest e = EngagementRequest.builder()
-                .mode(dto.getMode())
+                .mode(selfPick ? EngagementMode.SELF : dto.getMode())
+                .applyCategory(dto.getApplyCategory())
+                .pointsCategory(dto.getPointsCategory())
+                .pointsItem(dto.getPointsItem())
                 .taskType(dto.getTaskType())
                 .domain(domain)
                 .applicant(applicant)
@@ -641,7 +651,9 @@ public class EngagementRequestService {
                 .taskDescription(dto.getTaskDescription())
                 .status(EngagementRequestStatus.DRAFT)
                 .build();
-        e.setDesignatedExperts(resolveDesignatedExperts(dto.getDesignatedExpertIds(), domain.getId()));
+        if (!selfPick) {
+            e.setDesignatedExperts(resolveDesignatedExperts(dto.getDesignatedExpertIds(), domain.getId()));
+        }
         return toResponse(engagementRequestRepository.save(e));
     }
 
@@ -675,6 +687,15 @@ public class EngagementRequestService {
         if (dto.getTaskDescription() != null) {
             e.setTaskDescription(dto.getTaskDescription());
         }
+        if (dto.getApplyCategory() != null) {
+            e.setApplyCategory(dto.getApplyCategory());
+        }
+        if (dto.getPointsCategory() != null) {
+            e.setPointsCategory(dto.getPointsCategory());
+        }
+        if (dto.getPointsItem() != null) {
+            e.setPointsItem(dto.getPointsItem());
+        }
         if (dto.getDesignatedExpertIds() != null) {
             e.setDesignatedExperts(resolveDesignatedExperts(dto.getDesignatedExpertIds(), e.getDomain().getId()));
         }
@@ -699,16 +720,31 @@ public class EngagementRequestService {
         if (e.getTaskDescription() == null || e.getTaskDescription().trim().length() < MIN_TASK_DESC_LEN) {
             throw new IllegalArgumentException("任务描述至少 " + MIN_TASK_DESC_LEN + " 个字符");
         }
-        assertDomainHasSteward(e.getDomain());
         if (e.getEndAt() != null && e.getEndAt().isBefore(e.getStartAt())) {
             throw new IllegalArgumentException("结束时间不能早于开始时间");
         }
-        if (e.getDesignatedExperts() != null) {
-            for (Expert expert : e.getDesignatedExperts()) {
-                assertExpertCoversRequestDomain(expert, e.getDomain().getId());
+
+        boolean isSelfPick = "积分自提".equals(e.getApplyCategory());
+        if (isSelfPick) {
+            e.setMode(EngagementMode.SELF);
+            // 尝试将申请人自身的专家档案设为执行人
+            Expert selfExpert = expertRepository.findByOwnerId(userId).orElse(null);
+            if (selfExpert != null) {
+                e.setAssignedExperts(new LinkedHashSet<>(Set.of(selfExpert)));
+                e.setExpertAccepted(true);
+                e.setAssignedAt(LocalDateTime.now());
             }
+            e.setStatus(EngagementRequestStatus.IN_PROGRESS);
+        } else {
+            assertDomainHasSteward(e.getDomain());
+            if (e.getDesignatedExperts() != null) {
+                for (Expert expert : e.getDesignatedExperts()) {
+                    assertExpertCoversRequestDomain(expert, e.getDomain().getId());
+                }
+            }
+            e.setStatus(EngagementRequestStatus.PENDING_STEWARD_ASSIGN);
         }
-        e.setStatus(EngagementRequestStatus.PENDING_STEWARD_ASSIGN);
+
         EngagementRequest saved = engagementRequestRepository.save(e);
         if (saved.getReferenceCode() == null || saved.getReferenceCode().isBlank()) {
             saved.setReferenceCode(newReferenceCode(saved.getId()));

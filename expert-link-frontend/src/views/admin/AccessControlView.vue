@@ -84,7 +84,6 @@ const menuRows = ref<MenuRow[]>([])
 const openedGroups = ref<string[]>(['engagements', 'system'])
 
 const menuLabelMap: Record<string, string> = {
-  dashboard: '仪表盘',
   expertLibrary: '专家库',
   'engagements.mine': '我的申请',
   'engagements.new': '新建申请',
@@ -105,7 +104,7 @@ const menuLabelMap: Record<string, string> = {
 const menuKeys = computed(() => settings.menuKeys)
 const roles = USER_ROLE_OPTIONS.map((o) => o.value).filter((r) => r !== 'VISITOR')
 
-const topLevelMenuOrder = ['dashboard', 'expertLibrary', 'experts', 'domains', 'skills', 'analysis'] as const
+const topLevelMenuOrder = ['expertLibrary', 'experts', 'domains', 'skills', 'analysis'] as const
 const collapsibleGroupOrder = ['engagements', 'system'] as const
 const groupLabelMap: Record<(typeof collapsibleGroupOrder)[number], string> = {
   engagements: '调用申请',

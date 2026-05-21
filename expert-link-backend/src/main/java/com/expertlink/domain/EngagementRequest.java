@@ -28,6 +28,18 @@ public class EngagementRequest extends BaseEntity {
     @Column(nullable = false, length = 30)
     private EngagementMode mode;
 
+    /** 申请类别：专家调用 / 积分自提 */
+    @Column(name = "apply_category", length = 20)
+    private String applyCategory;
+
+    /** 积分大类 */
+    @Column(name = "points_category", length = 20)
+    private String pointsCategory;
+
+    /** 积分项目 */
+    @Column(name = "points_item", length = 30)
+    private String pointsItem;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "task_type", nullable = false, length = 40)
     private EngagementTaskType taskType;

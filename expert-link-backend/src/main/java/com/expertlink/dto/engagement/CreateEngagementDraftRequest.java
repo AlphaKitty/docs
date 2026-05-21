@@ -17,6 +17,15 @@ public class CreateEngagementDraftRequest {
     @NotNull
     private EngagementMode mode;
 
+    /** 申请类别：专家调用 / 积分自提 */
+    private String applyCategory;
+
+    /** 积分大类 */
+    private String pointsCategory;
+
+    /** 积分项目 */
+    private String pointsItem;
+
     @NotNull
     private EngagementTaskType taskType;
 

@@ -34,7 +34,7 @@
               <el-option v-for="item in pointsItemOptions" :key="item" :label="item" :value="item" />
             </el-select>
           </el-form-item>
-          <el-form-item label="调用模式" required>
+          <el-form-item v-if="!isSelfPick" label="调用模式" required>
             <el-radio-group v-model="form.mode">
               <el-radio label="NAMED">点名</el-radio>
               <el-radio label="STEWARD_ASSIGN">行管指派</el-radio>
@@ -224,7 +224,7 @@
         </div>
       </el-card>
 
-      <el-card shadow="never" class="section">
+      <el-card v-if="!isSelfPick" shadow="never" class="section">
         <template #header>专家需求</template>
         <el-form-item label="需求领域" required>
           <el-select
@@ -445,6 +445,7 @@ const extraForm = reactive({
 })
 
 const applyCategoryOptions = APPLY_CATEGORY_OPTIONS
+const isSelfPick = computed(() => extraForm.applyCategory === '积分自提')
 const pointsCategoryOptions = computed(() => POINTS_CATEGORY_BY_APPLY_CATEGORY[extraForm.applyCategory] || [])
 const pointsItemOptions = computed(() => POINTS_ITEM_BY_CATEGORY[extraForm.pointsCategory] || [])
 const contributionScopeOptions = computed(() => CONTRIBUTION_SCOPE_BY_ITEM[extraForm.pointsItem] || [])
@@ -787,16 +788,28 @@ async function onSave() {
     const ok: number[] = []
     const failed: number[] = []
     const failureMessages: string[] = []
-    for (const domainId of effectiveDomainIds.value) {
+    const domainIds = isSelfPick.value
+      ? [effectiveDomainIds.value[0]].filter(Boolean)
+      : effectiveDomainIds.value
+    if (!domainIds.length) {
+      ElMessage.warning('请选择需求领域')
+      return
+    }
+    for (const domainId of domainIds) {
       try {
         const created = await EngagementRequestService.createDraft({
           domainId,
-          mode: form.mode,
+          mode: isSelfPick.value ? 'SELF' : form.mode,
+          applyCategory: extraForm.applyCategory || undefined,
+          pointsCategory: extraForm.pointsCategory || undefined,
+          pointsItem: extraForm.pointsItem || undefined,
           taskType: form.taskType,
           startAt: form.startAt,
           endAt: form.endAt || undefined,
           taskDescription: buildTaskDescription(),
-          ...(form.designatedExpertIds.length > 0 ? { designatedExpertIds: form.designatedExpertIds } : {}),
+          ...(!isSelfPick.value && form.designatedExpertIds.length > 0
+            ? { designatedExpertIds: form.designatedExpertIds }
+            : {}),
         })
         ok.push(created.id)
       } catch (e: unknown) {
