@@ -120,6 +120,20 @@ export class EngagementRequestService {
     }
   }
 
+  static async uploadFile(file: File): Promise<{ path: string; originalFilename: string }> {
+    const form = new FormData()
+    form.append('file', file)
+    try {
+      const response = await apiClient.post<ApiResponse<{ path: string; originalFilename: string }>>(
+        '/files/upload',
+        form
+      )
+      return unwrap(response)
+    } catch (e) {
+      throw handleApiError(e, '上传文件失败')
+    }
+  }
+
   static async uploadEvaluationFile(id: number, file: File): Promise<{ path: string; originalFilename: string }> {
     const form = new FormData()
     form.append('file', file)

@@ -116,6 +116,20 @@
             </el-descriptions>
           </el-card>
         </div>
+        <div v-if="parsedAttachments.length" class="mt-row attachments-row">
+          <span class="attachments-label">附件：</span>
+          <el-space wrap>
+            <el-button
+              v-for="(p, idx) in parsedAttachments"
+              :key="idx"
+              link
+              type="primary"
+              @click="downloadAttachment(p)"
+            >
+              附件 {{ idx + 1 }}
+            </el-button>
+          </el-space>
+        </div>
         <el-descriptions v-if="fusionExtraText" :column="1" border class="mt-row">
           <el-descriptions-item label="补充描述">
             {{ fusionExtraText }}
@@ -739,13 +753,13 @@ const structuredInfoGroups = computed(() => {
   const applyInfo = pickItems(['申请类别', '积分大类', '积分项目'])
   if (applyInfo.length) groups.push({ title: '申请信息', items: applyInfo })
 
-  const requesterInfo = pickItems(['需求人', '联系方式'])
+  const requesterInfo = pickItems(['需求人', '需求人部门', '需求人职位', '联系方式'])
   if (requesterInfo.length) groups.push({ title: '需求方信息', items: requesterInfo })
 
   const projectInfo = pickItems(['项目部门', '项目名称', '项目级别', '客户代码', '产品线', '当前阶段', '是否KDW', '是否迭代产品'])
   if (projectInfo.length) groups.push({ title: '项目基本信息', items: projectInfo })
 
-  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动需求信息', '成果提交简述', '附件', '专家价值'])
+  const activityInfo = pickItems(['活动名称', '活动地点', '贡献范围', '活动需求信息', '成果提交简述', '专家价值'])
   if (activityInfo.length) groups.push({ title: '活动信息', items: activityInfo })
 
   const expertInfo = pickItems(['需求人数'])
@@ -768,6 +782,12 @@ const pointsEvalRulesDisplay = computed(() => getPointsEvalRulesDisplay(currentP
 
 const applyCategory = computed(() => parsedTaskDescription.value.map['申请类别'] || '')
 const isExpertCallApply = computed(() => applyCategory.value === '专家调用')
+
+const parsedAttachments = computed(() => {
+  const attachmentLine = parsedTaskDescription.value.map['附件'] || ''
+  if (!attachmentLine.trim()) return []
+  return attachmentLine.split(';').map((s: string) => s.trim()).filter(Boolean)
+})
 
 const stepMeta = computed(() => {
   if (!row.value) return { active: 0, stepsStatus: undefined as 'error' | 'process' | 'wait' | 'finish' | 'success' | undefined }
@@ -816,6 +836,16 @@ function parseStructuredTaskDescription(taskDescription: string): {
       const key = trimmed.slice(0, idx).trim()
       const value = trimmed.slice(idx + 1).trim()
       if (key) result[key] = value
+    }
+  }
+  // 拆分需求人：张三 / e-HR带出 / 项目经理 → 需求人 + 需求人部门 + 需求人职位
+  const requesterRaw = result['需求人']
+  if (requesterRaw) {
+    const parts = requesterRaw.split(' / ').map((s: string) => s.trim())
+    if (parts.length >= 3) {
+      result['需求人'] = parts[0]
+      result['需求人部门'] = parts[1]
+      result['需求人职位'] = parts[2]
     }
   }
   if (result['补充描述']) {
@@ -1515,12 +1545,12 @@ async function downloadAttachment(path: string) {
   const fileName = fileNameFromPath(path)
   const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null
   try {
-    const res = await fetch(
-      `/api/engagement-requests/${id.value}/evaluation-files/${encodeURIComponent(fileName)}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }
-    )
+    const downloadUrl = path.startsWith('/files/')
+      ? `/api/files/${encodeURIComponent(fileName)}`
+      : `/api/engagement-requests/${id.value}/evaluation-files/${encodeURIComponent(fileName)}`
+    const res = await fetch(downloadUrl, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     if (!res.ok) {
       let backendMessage = ''
       try {
@@ -1618,6 +1648,17 @@ async function downloadAttachment(path: string) {
 }
 .structured-group {
   border: 1px solid #ebeef5;
+}
+
+.attachments-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.attachments-label {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  flex-shrink: 0;
 }
 
 :deep(.el-descriptions__cell) {
