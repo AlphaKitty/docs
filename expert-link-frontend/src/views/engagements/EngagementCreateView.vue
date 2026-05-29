@@ -463,6 +463,13 @@ watch(applyCategoryOptions, () => {
   }
 })
 const isSelfPick = computed(() => extraForm.applyCategory === '积分自提')
+// 积分自提模式：自动填充当前用户信息，需求方即本人
+watch(isSelfPick, (selfPick) => {
+  if (selfPick) {
+    extraForm.requester = auth.displayName
+    extraForm.contact = auth.email
+  }
+})
 const pointsCategoryOptions = computed(() => POINTS_CATEGORY_BY_APPLY_CATEGORY[extraForm.applyCategory] || [])
 const pointsItemOptions = computed(() => POINTS_ITEM_BY_CATEGORY[extraForm.pointsCategory] || [])
 const contributionScopeOptions = computed(() => CONTRIBUTION_SCOPE_BY_ITEM[extraForm.pointsItem] || [])
