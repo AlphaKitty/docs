@@ -154,7 +154,7 @@
               style="width: 100%"
             />
           </el-form-item>
-          <el-form-item label="活动地点" :required="activityLocationRequired">
+          <el-form-item label="活动地点" :required="activityLocationRequired" class="location-form-item">
             <div class="location-cascade">
               <el-select v-model="extraForm.locationRegion" placeholder="区域" @change="onLocationRegionChange">
                 <el-option v-for="r in mockLocationRegions" :key="r" :label="r" :value="r" />
@@ -195,8 +195,8 @@
           />
         </el-form-item>
         <div class="grid four">
-          <el-form-item label="专家价值" required>
-            <el-input v-model="extraForm.expertValue" placeholder="需求专家参与活动给公司/BG带来的期望价值评估" />
+          <el-form-item label="专家价值" required class="full-width-form-item">
+            <el-input v-model="extraForm.expertValue" type="textarea" :rows="3" placeholder="需求专家参与活动给公司/BG带来的期望价值评估" />
           </el-form-item>
           <el-form-item label="附件" required>
             <el-upload
@@ -318,6 +318,9 @@ import { EngagementRequestService } from '@/api/services/engagement-request.serv
 import { ExpertService } from '@/api/services/expert.service'
 import type { EngagementMode, EngagementTaskType } from '@/api/types/engagement'
 import type { ExpertDetail } from '@/api/types/expert'
+import { useAuthStore } from '@/stores/auth'
+import { hasAnyRole } from '@/constants/role-policy'
+import { useSystemSettingsStore } from '@/stores/system-settings'
 import {
   ACTIVITY_INFO_PLACEHOLDER_BY_ITEM,
   ACTIVITY_LOCATION_REQUIRED_ITEMS,
@@ -394,6 +397,10 @@ const mockLocationBuildings = computed(() => {
 
 const attachmentPaths = ref<string[]>([])
 
+const auth = useAuthStore()
+const settings = useSystemSettingsStore()
+const isExpert = computed(() => hasAnyRole(auth.roles, settings.rolesFor('EXPERT')))
+
 const activityTimeRange = ref<[string, string] | null>(null)
 
 watch(activityTimeRange, (val) => {
@@ -444,7 +451,17 @@ const extraForm = reactive({
   techTags: '',
 })
 
-const applyCategoryOptions = APPLY_CATEGORY_OPTIONS
+const applyCategoryOptions = computed(() =>
+  isExpert.value
+    ? [...APPLY_CATEGORY_OPTIONS]
+    : APPLY_CATEGORY_OPTIONS.filter((opt) => opt !== '积分自提')
+)
+// 非专家用户自动回退到"专家调用"
+watch(applyCategoryOptions, () => {
+  if (!applyCategoryOptions.value.includes(extraForm.applyCategory)) {
+    extraForm.applyCategory = '专家调用'
+  }
+})
 const isSelfPick = computed(() => extraForm.applyCategory === '积分自提')
 const pointsCategoryOptions = computed(() => POINTS_CATEGORY_BY_APPLY_CATEGORY[extraForm.applyCategory] || [])
 const pointsItemOptions = computed(() => POINTS_ITEM_BY_CATEGORY[extraForm.pointsCategory] || [])
@@ -900,6 +917,12 @@ async function onSave() {
 .location-cascade .el-select {
   flex: 1;
   min-width: 0;
+}
+.location-form-item {
+  grid-column: span 2;
+}
+.full-width-form-item {
+  grid-column: 1 / -1;
 }
 .actions {
   display: flex;

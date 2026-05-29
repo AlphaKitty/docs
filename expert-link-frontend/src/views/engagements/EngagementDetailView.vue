@@ -82,10 +82,26 @@
           }}
         </el-descriptions-item>
         <el-descriptions-item label="指派说明" :span="2">{{ row.assignmentNote || '—' }}</el-descriptions-item>
-        <el-descriptions-item v-if="row.suggestedScore != null" label="系统建议分">
+        <!-- 系统建议分：按专家分开展示 -->
+        <el-descriptions-item v-if="expertSuggestedScoreRows.length > 0" label="系统建议分（按专家）" :span="2">
+          <div v-for="item in expertSuggestedScoreRows" :key="item.expertId" class="score-row">
+            <span class="score-expert-name">{{ item.expertName || `专家 #${item.expertId}` }}：</span>
+            <span class="score-value">{{ item.suggestedScore ?? '—' }} 分</span>
+          </div>
+          <span class="hint" style="margin-top:4px;display:inline-block;">评价维度预计算，供放分参考</span>
+        </el-descriptions-item>
+        <el-descriptions-item v-else-if="row.suggestedScore != null" label="系统建议分">
           {{ row.suggestedScore }}（评价维度预计算，供放分参考）
         </el-descriptions-item>
-        <el-descriptions-item v-if="row.stewardFinalScore != null" label="行管确认分">
+        <!-- 行管确认分：按专家分开展示 -->
+        <el-descriptions-item v-if="expertStewardScoreRows.length > 0" label="行管确认分（按专家）" :span="2">
+          <div v-for="item in expertStewardScoreRows" :key="item.expertId" class="score-row">
+            <span class="score-expert-name">{{ item.expertName || `专家 #${item.expertId}` }}：</span>
+            <span class="score-value">{{ item.finalScore }} 分</span>
+            <el-tag v-if="item.reason" type="info" size="small" class="score-reason">{{ item.reason }}</el-tag>
+          </div>
+        </el-descriptions-item>
+        <el-descriptions-item v-else-if="row.stewardFinalScore != null" label="行管确认分">
           {{ row.stewardFinalScore }}
         </el-descriptions-item>
       </el-descriptions>
@@ -643,6 +659,49 @@ function stewardLevelDerivedScore(item: ExpertEvalFormItem): number {
 }
 
 const expertEvalForms = ref<ExpertEvalFormItem[]>([])
+
+/** 解析 evalComment 中的每位专家建议分 */
+const expertSuggestedScoreRows = computed<EvalCommentDetailRow[]>(() => {
+  if (!row.value?.evalComment) return []
+  return parseEvalCommentRows(row.value.evalComment) || []
+})
+
+/** 解析 stewardReleaseNote 中的每位专家确认分 */
+const expertStewardScoreRows = computed<Array<{
+  expertId: number
+  expertName: string
+  finalScore: number
+  reason?: string
+}>>(() => {
+  const releaseNote = row.value?.stewardReleaseNote
+  if (!releaseNote?.trim()) return []
+  // stewardReleaseNote 可能是 "说明文字\n{json}" 或直接 "{json}"
+  const jsonPart = releaseNote.includes('\n')
+    ? releaseNote.slice(releaseNote.indexOf('\n') + 1)
+    : releaseNote
+  try {
+    const parsed = JSON.parse(jsonPart) as {
+      items?: Array<{
+        expertId: number
+        finalScore?: number
+        suggestedScore?: number
+        reason?: string
+        [key: string]: unknown
+      }>
+    }
+    if (!parsed.items?.length) return []
+    const names = row.value?.assignedExpertNames || []
+    const ids = row.value?.assignedExpertIds || []
+    return parsed.items.map((item) => ({
+      expertId: item.expertId,
+      expertName: names[ids.indexOf(item.expertId)] || `专家 #${item.expertId}`,
+      finalScore: item.finalScore ?? item.suggestedScore ?? 0,
+      reason: item.reason,
+    }))
+  } catch {
+    return []
+  }
+})
 
 const id = computed(() => Number(route.params.id))
 
@@ -1707,5 +1766,29 @@ async function downloadAttachment(path: string) {
 }
 .rule-body.pre-line {
   white-space: pre-line;
+}
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+.score-row + .score-row {
+  margin-top: 2px;
+}
+.score-expert-name {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
+}
+.score-value {
+  color: var(--el-color-primary);
+  font-weight: 700;
+}
+.score-reason {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

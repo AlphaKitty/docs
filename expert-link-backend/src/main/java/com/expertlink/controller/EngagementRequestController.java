@@ -72,7 +72,7 @@ public class EngagementRequestController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','EXPERT_USER','SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<EngagementRequestResponse>> patchDraft(
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable Long id,
@@ -81,7 +81,7 @@ public class EngagementRequestController {
     }
 
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','EXPERT_USER','SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<EngagementRequestResponse>> submit(
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable Long id) {
@@ -154,7 +154,7 @@ public class EngagementRequestController {
     }
 
     @PostMapping("/{id}/submit-evaluation")
-    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('REGULAR_USER','DEPT_ADMIN','EXPERT_USER','SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<EngagementRequestResponse>> submitEvaluation(
             @AuthenticationPrincipal AuthPrincipal principal,
             @PathVariable Long id,
